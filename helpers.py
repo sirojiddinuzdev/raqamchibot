@@ -49,14 +49,18 @@ def build_subscribe_keyboard(not_subscribed: list[dict], check_callback: str = "
 
 # ─── Reply Klaviaturalar (pastda turuvchi tugmalar) ───────────
 
-def main_menu_keyboard() -> ReplyKeyboardMarkup:
+def main_menu_keyboard(is_admin: bool = False) -> ReplyKeyboardMarkup:
     """Foydalanuvchi asosiy menyusi — pastda doim ko'rinadi"""
+    keys = [
+        ["📱 Raqam sotib olish"],
+        ["💳 Hisobni to'ldirish", "💰 Hisobim"],
+        ["📞 Admin bilan bog'lanish"],
+    ]
+    if is_admin:
+        keys.append(["👨‍💻 Admin Panel"])
+
     return ReplyKeyboardMarkup(
-        [
-            ["📱 Raqam sotib olish"],
-            ["💳 Hisobni to'ldirish", "💰 Hisobim"],
-            ["📞 Admin bilan bog'lanish"],
-        ],
+        keys,
         resize_keyboard=True,
         is_persistent=True,
     )
@@ -67,8 +71,7 @@ def admin_main_keyboard() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(
         [
             ["📊 Statistika", "👥 Foydalanuvchilar"],
-            ["💸 Balans qo'shish", "💸 Balans ayirish"],
-            ["🚫 Ban qo'yish", "✅ Banni ochish"],
+            ["➖ Balans ➕", "🚫 BAN ✅"],
             ["📢 Kanallar", "🌍 Davlatlar"],
             ["💳 Karta sozlash", "📨 Ommaviy xabar"],
             ["⏳ Kutayotgan to'lovlar"],

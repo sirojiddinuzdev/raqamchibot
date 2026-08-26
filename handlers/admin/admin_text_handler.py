@@ -51,7 +51,7 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                     f"ID: <code>{u['user_id']}</code>\n"
                     f"Ism: {u['full_name']}\n"
                     f"Username: @{u['username']}\n"
-                    f"Balans: {u['balance']}$\n"
+                    f"Balans: {int(u['balance']):,} so'm\n"
                     f"Status: {status}\n"
                 )
                 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
@@ -70,24 +70,25 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     elif action in ["add_balance", "sub_balance", "confirm_deposit"]:
         try:
-            amount = float(text.replace(",", "."))
+            clean_text = text.replace(",", "").replace(" ", "").replace(".", "")
+            amount = float(clean_text)
             uid = context.user_data.get("target_user")
             if not uid:
                 raise ValueError
             
             if action == "add_balance":
                 await db.update_balance(uid, amount)
-                await update.message.reply_text(f"✅ ID {uid} hisobiga {amount}$ qo'shildi.", reply_markup=admin_main_keyboard())
+                await update.message.reply_text(f"✅ ID {uid} hisobiga {int(amount):,} so'm qo'shildi.", reply_markup=admin_main_keyboard())
             elif action == "sub_balance":
                 await db.update_balance(uid, -amount)
-                await update.message.reply_text(f"✅ ID {uid} hisobidan {amount}$ ayirildi.", reply_markup=admin_main_keyboard())
+                await update.message.reply_text(f"✅ ID {uid} hisobidan {int(amount):,} so'm ayirildi.", reply_markup=admin_main_keyboard())
             elif action == "confirm_deposit":
                 await db.update_balance(uid, amount)
-                await update.message.reply_text(f"✅ To'lov tasdiqlandi. ID {uid} hisobiga {amount}$ qo'shildi.", reply_markup=admin_main_keyboard())
+                await update.message.reply_text(f"✅ To'lov tasdiqlandi. ID {uid} hisobiga {int(amount):,} so'm qo'shildi.", reply_markup=admin_main_keyboard())
                 try:
                     await context.bot.send_message(
                         chat_id=uid,
-                        text=f"✅ <b>Hisobingiz to'ldirildi!</b>\n💰 Qo'shildi: {amount} $",
+                        text=f"✅ <b>Hisobingiz to'ldirildi!</b>\n💰 Qo'shildi: {int(amount):,} so'm",
                         parse_mode="HTML"
                     )
                 except Exception:
@@ -134,11 +135,21 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     elif action == "set_country_price":
         try:
-            price = float(text)
+            clean_text = text.replace(",", "").replace(" ", "").replace(".", "")
+            price = int(clean_text)
             c_code = context.user_data.get("target_country")
             c_name = context.user_data.get("target_country_name")
             await db.set_setting(f"country_{c_code}", str(price))
-            await update.message.reply_text(f"✅ <b>{c_name}</b> davlati {price}$ narxda sotuvga qo'shildi.", parse_mode="HTML", reply_markup=admin_main_keyboard())
+            
+            # Asl narxni ham saqlab qo'yamiz (keyinchalik foyda hisoblash uchun)
+            api_countries = context.user_data.get("api_countries", {})
+            api_price = api_countries.get(c_code)
+            if api_price:
+                from config import EXCHANGE_RATE
+                api_price_uzs = int(float(api_price) * EXCHANGE_RATE)
+                await db.set_setting(f"country_{c_code}_original", str(api_price_uzs))
+                
+            await update.message.reply_text(f"✅ <b>{c_name}</b> davlati {price:,} so'm narxda sotuvga qo'shildi.", parse_mode="HTML", reply_markup=admin_main_keyboard())
         except ValueError:
             await update.message.reply_text("❌ Noto'g'ri narx kiritildi.", reply_markup=admin_main_keyboard())
         context.user_data.pop("adm_action", None)

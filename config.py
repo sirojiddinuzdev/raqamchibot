@@ -15,6 +15,9 @@ ADMIN_IDS = [int(x.strip()) for x in os.getenv("ADMIN_IDS", "").split(",") if x.
 # Spider-service API kaliti
 SPIDER_API_KEY = os.getenv("SPIDER_API_KEY", "")
 
+# Dollar (USD) kursi (So'm uchun)
+EXCHANGE_RATE = int(os.getenv("EXCHANGE_RATE", "12000"))
+
 # Karta raqami (to'ldirish uchun)
 CARD_NUMBER = "8600 0000 0000 0000"
 CARD_OWNER = "Bot Admin"

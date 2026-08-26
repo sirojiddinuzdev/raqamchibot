@@ -40,17 +40,21 @@ async def adm_stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from database import DB_PATH
     async with aiosqlite.connect(DB_PATH) as dbase:
         async with dbase.execute(
-            "SELECT COUNT(*), SUM(price) FROM purchases WHERE status='completed'"
+            "SELECT COUNT(*), SUM(price), SUM(original_price) FROM purchases WHERE status='completed'"
         ) as cur:
             row = await cur.fetchone()
             completed_purchases = row[0] or 0
             total_income = row[1] or 0.0
+            total_original = row[2] or 0.0
+            profit = total_income - total_original
 
     text = (
         f"📊 <b>Bot Statistikasi</b>\n\n"
         f"👥 Umumiy foydalanuvchilar: <b>{total_users}</b>\n"
         f"✅ Sotilgan raqamlar: <b>{completed_purchases}</b> ta\n"
-        f"💵 Umumiy aylanma: <b>{total_income:.2f} $</b>"
+        f"💵 Asl narxi (Tan narxi): <b>{int(total_original):,} so'm</b>\n"
+        f"💰 Biz sotgan narx: <b>{int(total_income):,} so'm</b>\n"
+        f"📈 Sof foyda: <b>{int(profit):,} so'm</b>"
     )
     await update.message.reply_text(text, parse_mode="HTML")
 

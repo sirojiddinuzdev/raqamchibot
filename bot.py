@@ -40,12 +40,16 @@ from handlers.admin import (
     adm_ban_handler,
     adm_unban_handler,
     prompt_user_id_handler,
+    adm_ban_menu_handler,
+    adm_balance_menu_handler,
+    adm_users_page_callback,
     adm_channels_handler,
     adm_add_channel_callback,
     adm_remove_channel_callback,
     adm_del_channel_callback,
     adm_countries_handler,
     adm_add_country_list_callback,
+    adm_edit_country_list_callback,
     adm_clist_page_callback,
     adm_pick_country_callback,
     adm_remove_country_list_callback,
@@ -123,7 +127,6 @@ async def post_init(application: Application):
 
     commands = [
         BotCommand("start", "Botni ishga tushirish"),
-        BotCommand("admin", "Admin panel (faqat adminlar uchun)"),
     ]
     await application.bot.set_my_commands(commands)
     logger.info("✅ Bot buyruqlari o'rnatildi")
@@ -141,7 +144,7 @@ def main():
 
     # ── Buyruqlar ──
     app.add_handler(CommandHandler("start", start_handler))
-    app.add_handler(CommandHandler("admin", admin_command))
+    app.add_handler(MessageHandler(filters.Regex("^(👨‍💻 Admin Panel|🔙 Orqaga)$"), admin_command))
 
     # ── Reply Keyboard matnlari (Foydalanuvchi) ──
     app.add_handler(MessageHandler(filters.Regex("^📱 Raqam sotib olish$"), buy_number_handler))
@@ -153,6 +156,8 @@ def main():
     # ── Reply Keyboard matnlari (Admin) ──
     app.add_handler(MessageHandler(filters.Regex("^📊 Statistika$"), adm_stats_handler))
     app.add_handler(MessageHandler(filters.Regex("^👥 Foydalanuvchilar$"), adm_users_handler))
+    app.add_handler(MessageHandler(filters.Regex("^🚫 BAN ✅$"), adm_ban_menu_handler))
+    app.add_handler(MessageHandler(filters.Regex("^➖ Balans ➕$"), adm_balance_menu_handler))
     app.add_handler(MessageHandler(
         filters.Regex("^(💸 Balans qo'shish|💸 Balans ayirish|🚫 Ban qo'yish|✅ Banni ochish)$"), 
         prompt_user_id_handler
@@ -170,6 +175,7 @@ def main():
     app.add_handler(CallbackQueryHandler(cancel_buy_callback, pattern="^cancel_buy$"))
     app.add_handler(CallbackQueryHandler(confirm_buy_callback, pattern="^confirm_buy$"))
     app.add_handler(CallbackQueryHandler(get_code_callback, pattern=r"^get_code_\d+$"))
+    app.add_handler(CallbackQueryHandler(adm_users_page_callback, pattern=r"^adm_users_page_\d+$"))
 
     app.add_handler(CallbackQueryHandler(adm_add_balance_handler, pattern=r"^adm_add_bal_\d+$"))
     app.add_handler(CallbackQueryHandler(adm_sub_balance_handler, pattern=r"^adm_sub_bal_\d+$"))
@@ -180,6 +186,7 @@ def main():
     app.add_handler(CallbackQueryHandler(adm_remove_channel_callback, pattern="^adm_remove_channel$"))
     app.add_handler(CallbackQueryHandler(adm_del_channel_callback, pattern=r"^adm_del_ch_"))
     app.add_handler(CallbackQueryHandler(adm_add_country_list_callback, pattern="^adm_add_country_list$"))
+    app.add_handler(CallbackQueryHandler(adm_edit_country_list_callback, pattern="^adm_edit_country_list$"))
     app.add_handler(CallbackQueryHandler(adm_clist_page_callback, pattern=r"^page_adm_clist_\d+$"))
     app.add_handler(CallbackQueryHandler(adm_pick_country_callback, pattern=r"^adm_pick_country_"))
     app.add_handler(CallbackQueryHandler(adm_remove_country_list_callback, pattern="^adm_remove_country_list$"))

@@ -8,6 +8,7 @@ from helpers import (
     build_subscribe_keyboard,
     main_menu_keyboard,
 )
+from handlers.admin.admin_core import is_admin
 
 logger = logging.getLogger(__name__)
 
@@ -65,12 +66,13 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
         f"👋 <b>Xush kelibsiz, {user.first_name}!</b>\n\n"
         f"🤖 <b>Raqamchi Bot</b> — Telegram akkount raqamlari sotib olish xizmati\n\n"
-        f"💰 <b>Hisobingiz:</b> {balance:.2f} $\n"
+        f"💰 <b>Hisobingiz:</b> {int(balance):,} so'm\n"
         f"🆔 <b>ID:</b> <code>{user_id}</code>\n\n"
         f"👇 Quyidagi menyudan foydalaning:"
     )
+    is_admin_user = await is_admin(user_id)
     await update.message.reply_text(
-        text, parse_mode="HTML", reply_markup=main_menu_keyboard()
+        text, parse_mode="HTML", reply_markup=main_menu_keyboard(is_admin_user)
     )
 
 
@@ -97,10 +99,10 @@ async def check_subscription_callback(update: Update, context: ContextTypes.DEFA
         await query.message.chat.send_message(
             f"✅ <b>Obuna tasdiqlandi!</b>\n\n"
             f"👋 Xush kelibsiz, <b>{query.from_user.first_name}</b>!\n\n"
-            f"💰 <b>Hisobingiz:</b> {balance:.2f} $\n"
+            f"💰 <b>Hisobingiz:</b> {int(balance):,} so'm\n"
             f"🆔 <b>ID:</b> <code>{user_id}</code>",
             parse_mode="HTML",
-            reply_markup=main_menu_keyboard()
+            reply_markup=main_menu_keyboard(await is_admin(user_id))
         )
 
 
@@ -120,10 +122,10 @@ async def back_to_main_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     balance = user_data["balance"] if user_data else 0.0
     await update.message.reply_text(
         f"🏠 <b>Bosh menyu</b>\n\n"
-        f"💰 <b>Hisobingiz:</b> {balance:.2f} $\n"
+        f"💰 <b>Hisobingiz:</b> {int(balance):,} so'm\n"
         f"🆔 <b>ID:</b> <code>{user_id}</code>",
         parse_mode="HTML",
-        reply_markup=main_menu_keyboard()
+        reply_markup=main_menu_keyboard(await is_admin(user_id))
     )
 
 
@@ -147,19 +149,19 @@ async def my_balance_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             status_icon = "✅" if p["status"] == "completed" else "⏳"
             purchase_text += (
                 f"{status_icon} {p['country_name']} — "
-                f"<code>{p['number']}</code> — {p['price']:.2f}$\n"
+                f"<code>{p['number']}</code> — {int(p['price']):,} so'm\n"
             )
 
     text = (
         f"💰 <b>Hisobim</b>\n\n"
         f"🆔 ID: <code>{user_id}</code>\n"
         f"👤 Ism: {user_data['full_name']}\n"
-        f"💵 Balans: <b>{user_data['balance']:.2f} $</b>\n"
+        f"💵 Balans: <b>{int(user_data['balance']):,} so'm</b>\n"
         f"📅 Qo'shilgan: {user_data['joined_at'][:10]}"
         + purchase_text
     )
     await update.message.reply_text(
-        text, parse_mode="HTML", reply_markup=main_menu_keyboard()
+        text, parse_mode="HTML", reply_markup=main_menu_keyboard(await is_admin(user_id))
     )
 
 
@@ -174,5 +176,5 @@ async def contact_admin_handler(update: Update, context: ContextTypes.DEFAULT_TY
         f"Har qanday savol yoki muammo uchun:\n"
         f"👉 {SUPPORT_LINK}",
         parse_mode="HTML",
-        reply_markup=main_menu_keyboard()
+        reply_markup=main_menu_keyboard(await is_admin(update.effective_user.id))
     )

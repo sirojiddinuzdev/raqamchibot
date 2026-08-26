@@ -148,19 +148,32 @@ async def get_all_users() -> list[dict]:
             rows = await cur.fetchall()
             return [dict(r) for r in rows]
 
+async def get_users_page(limit: int = 10, offset: int = 0) -> list[dict]:
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        async with db.execute("SELECT * FROM users ORDER BY joined_at DESC LIMIT ? OFFSET ?", (limit, offset)) as cur:
+            rows = await cur.fetchall()
+            return [dict(r) for r in rows]
+
+async def get_users_count() -> int:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT COUNT(*) FROM users") as cur:
+            row = await cur.fetchone()
+            return row[0] if row else 0
+
 
 # ─── XARID ────────────────────────────────────────────────────
 
 async def create_purchase(
     user_id: int, country: str, country_name: str,
-    number: str, hash_code: str, price: float
+    number: str, hash_code: str, price: float, original_price: float = 0.0
 ) -> int:
     async with aiosqlite.connect(DB_PATH) as db:
         cur = await db.execute(
             """INSERT INTO purchases
-               (user_id, country, country_name, number, hash_code, price)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (user_id, country, country_name, number, hash_code, price)
+               (user_id, country, country_name, number, hash_code, price, original_price)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (user_id, country, country_name, number, hash_code, price, original_price)
         )
         await db.commit()
         return cur.lastrowid

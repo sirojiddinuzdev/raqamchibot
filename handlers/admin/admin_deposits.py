@@ -27,6 +27,6 @@ async def adm_confirm_dep_callback(update: Update, context: ContextTypes.DEFAULT
     context.user_data["target_user"] = int(uid)
 
     await query.message.reply_text(
-        f"✅ Kiritmoqchi bo'lgan summani yozing (ID: {uid}):\n(Masalan: 5 yoki 5.5)",
+        f"✅ Kiritmoqchi bo'lgan summani so'mda yozing (ID: {uid}):\n(Masalan: 15000)",
         reply_markup=cancel_keyboard()
     )

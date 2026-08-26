@@ -4,6 +4,7 @@ from telegram.ext import ContextTypes
 import database as db
 from helpers import cancel_keyboard
 from handlers.user.user_core import ensure_subscribed
+from handlers.admin.admin_core import is_admin
 
 
 async def deposit_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -32,10 +33,11 @@ async def deposit_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data.pop("deposit_session_id", None)
             from helpers import main_menu_keyboard
             try:
+                is_admin_user = await is_admin(chat_id)
                 await context.bot.send_message(
                     chat_id=chat_id,
                     text="⏳ To'lov qilish uchun berilgan 5 daqiqa vaqt tugadi. To'lov bekor qilindi.",
-                    reply_markup=main_menu_keyboard()
+                    reply_markup=main_menu_keyboard(is_admin_user)
                 )
             except Exception:
                 pass
@@ -76,7 +78,7 @@ async def deposit_check_handler(update: Update, context: ContextTypes.DEFAULT_TY
 
     context.user_data["awaiting_deposit_check"] = False
     from helpers import main_menu_keyboard
-    await update.message.reply_text("🏠 Bosh menyu", reply_markup=main_menu_keyboard())
+    await update.message.reply_text("🏠 Bosh menyu", reply_markup=main_menu_keyboard(await is_admin(user.id)))
 
     for admin_id in ADMIN_IDS:
         try:

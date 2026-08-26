@@ -5,7 +5,7 @@ from telegram.ext import ContextTypes
 import database as db
 from database import DB_PATH
 from helpers import cancel_keyboard, paginated_keyboard
-from config import SPIDER_API_KEY
+from config import SPIDER_API_KEY, EXCHANGE_RATE
 from spider_api import SpiderAPI
 from countries import get_country_name
 from handlers.admin.admin_core import is_admin
@@ -23,6 +23,8 @@ async def adm_countries_handler(update: Update, context: ContextTypes.DEFAULT_TY
         async with dbase.execute("SELECT key, value FROM settings WHERE key LIKE 'country_%'") as cur:
             rows = await cur.fetchall()
 
+    api_countries = await spider.get_countries()
+
     text = "🌍 <b>Sotuvdagi davlatlar ro'yxati (Botda):</b>\n\n"
     if not rows:
         text += "Hozircha davlatlar qo'shilmagan."
@@ -30,10 +32,17 @@ async def adm_countries_handler(update: Update, context: ContextTypes.DEFAULT_TY
         for k, v in rows:
             c_code = k.replace("country_", "")
             c_name = get_country_name(c_code)
-            text += f"• {c_name} ({c_code}): <b>{v}$</b>\n"
+            api_price_usd = api_countries.get(c_code)
+            if api_price_usd:
+                api_price_uzs = f"{int(float(api_price_usd) * EXCHANGE_RATE):,.0f} so'm"
+            else:
+                api_price_uzs = "Noma'lum"
+            sale_price = f"{int(float(v)):,.0f} so'm" if v else "0 so'm"
+            text += f"• {c_name} ({c_code}): Asl: <b>{api_price_uzs}</b> | Sotuv: <b>{sale_price}</b>\n"
 
     kbd = InlineKeyboardMarkup([
         [InlineKeyboardButton("➕ Davlat qo'shish", callback_data="adm_add_country_list")],
+        [InlineKeyboardButton("✏️ Tahrirlash", callback_data="adm_edit_country_list")],
         [InlineKeyboardButton("➖ Davlatni o'chirish", callback_data="adm_remove_country_list")]
     ])
     await update.message.reply_text(text, parse_mode="HTML", reply_markup=kbd)
@@ -54,9 +63,10 @@ async def adm_add_country_list_callback(update: Update, context: ContextTypes.DE
     context.user_data["adm_clist_page"] = 0
 
     items = []
-    for code, _ in api_countries.items():
+    for code, price in api_countries.items():
         name = get_country_name(code)
-        items.append((f"adm_pick_country_{code}", name))
+        price_uzs = int(float(price) * EXCHANGE_RATE)
+        items.append((f"adm_pick_country_{code}", f"{name} ({price_uzs:,} so'm)"))
 
     kbd = paginated_keyboard(items, 0, per_page=15, prefix="adm_clist")
     await query.message.edit_text(
@@ -74,9 +84,10 @@ async def adm_clist_page_callback(update: Update, context: ContextTypes.DEFAULT_
 
     api_countries = context.user_data.get("api_countries", {})
     items = []
-    for code, _ in api_countries.items():
+    for code, price in api_countries.items():
         name = get_country_name(code)
-        items.append((f"adm_pick_country_{code}", name))
+        price_uzs = int(float(price) * EXCHANGE_RATE)
+        items.append((f"adm_pick_country_{code}", f"{name} ({price_uzs:,} so'm)"))
 
     kbd = paginated_keyboard(items, page, per_page=15, prefix="adm_clist")
     await query.message.edit_reply_markup(reply_markup=kbd)
@@ -91,13 +102,52 @@ async def adm_pick_country_callback(update: Update, context: ContextTypes.DEFAUL
     context.user_data["adm_action"] = "set_country_price"
     context.user_data["target_country"] = code
     context.user_data["target_country_name"] = name
+    
+    api_price = context.user_data.get("api_countries", {}).get(code)
+    if api_price:
+        api_price_uzs = f"{int(float(api_price) * EXCHANGE_RATE):,} so'm"
+    else:
+        api_price_uzs = "Noma'lum"
 
     await query.message.delete()
     await query.message.chat.send_message(
-        f"🌍 Siz <b>{name}</b> ({code}) ni tanladingiz.\n\n"
-        f"Sotish narxini kiriting (masalan: 1.5):",
+        f"🌍 Siz <b>{name}</b> ({code}) ni tanladingiz.\n"
+        f"Asl narxi (API dagi): <b>{api_price_uzs}</b>\n\n"
+        f"Sotish narxini so'mda kiriting (masalan: 15000):",
         parse_mode="HTML",
         reply_markup=cancel_keyboard()
+    )
+
+async def adm_edit_country_list_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    async with aiosqlite.connect(DB_PATH) as dbase:
+        async with dbase.execute("SELECT key FROM settings WHERE key LIKE 'country_%'") as cur:
+            rows = await cur.fetchall()
+
+    if not rows:
+        await query.message.edit_text("❌ Hozircha davlatlar qo'shilmagan.")
+        return
+
+    # To show original prices if needed, load api_countries
+    api_countries = await spider.get_countries()
+    context.user_data["api_countries"] = api_countries
+
+    items = []
+    for k in rows:
+        code = k[0].replace("country_", "")
+        name = get_country_name(code)
+        items.append((f"adm_pick_country_{code}", name))
+
+    kbd_buttons = []
+    for cb_data, btn_text in items:
+        kbd_buttons.append([InlineKeyboardButton(btn_text, callback_data=cb_data)])
+
+    await query.message.edit_text(
+        "✏️ <b>Narxini tahrirlash uchun davlatni tanlang:</b>",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(kbd_buttons)
     )
 
 

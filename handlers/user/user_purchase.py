@@ -12,6 +12,7 @@ from countries import get_country_name
 from spider_api import SpiderAPI
 from config import SPIDER_API_KEY
 from handlers.user.user_core import ensure_subscribed
+from handlers.admin.admin_core import is_admin
 
 spider = SpiderAPI(SPIDER_API_KEY)
 
@@ -46,7 +47,7 @@ async def buy_number_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not admin_countries:
         await update.message.reply_text(
             "❌ Hozircha sotuvda davlatlar yo'q.\nKeyinroq urinib ko'ring.",
-            reply_markup=main_menu_keyboard()
+            reply_markup=main_menu_keyboard(await is_admin(update.effective_user.id))
         )
         return
 
@@ -54,7 +55,7 @@ async def buy_number_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     items = []
     for code, price in admin_countries.items():
         name = get_country_name(code)
-        items.append((f"select_country_{code}", f"{name} | {price}$"))
+        items.append((f"select_country_{code}", f"{name} | {int(price):,} so'm"))
 
     kbd = paginated_keyboard(items, page, per_page=10, prefix="country")
     await update.message.reply_text(
@@ -87,7 +88,7 @@ async def country_page_callback(update: Update, context: ContextTypes.DEFAULT_TY
     items = []
     for code, price in admin_countries.items():
         name = get_country_name(code)
-        items.append((f"select_country_{code}", f"{name} | {price}$"))
+        items.append((f"select_country_{code}", f"{name} | {int(price):,} so'm"))
 
     kbd = paginated_keyboard(items, page, per_page=10, prefix="country")
     await query.message.edit_reply_markup(reply_markup=kbd)
@@ -122,8 +123,8 @@ async def select_country_callback(update: Update, context: ContextTypes.DEFAULT_
 
     text = (
         f"🌍 <b>Tanlangan davlat:</b> {country_name}\n"
-        f"💵 <b>Narxi:</b> {price:.2f} $\n"
-        f"💰 <b>Balansingiz:</b> {balance:.2f} $\n\n"
+        f"💵 <b>Narxi:</b> {int(price):,} so'm\n"
+        f"💰 <b>Balansingiz:</b> {int(balance):,} so'm\n\n"
     )
 
     if balance >= price:
@@ -135,7 +136,7 @@ async def select_country_callback(update: Update, context: ContextTypes.DEFAULT_
     else:
         text += (
             f"❌ <b>Balansingiz yetarli emas!</b>\n"
-            f"Kerakli: {price:.2f}$ | Yetishmaydi: {price - balance:.2f}$\n\n"
+            f"Kerakli: {int(price):,} so'm | Yetishmaydi: {int(price - balance):,} so'm\n\n"
             f"💳 Hisobni to'ldiring!"
         )
         kbd = InlineKeyboardMarkup([[
@@ -154,7 +155,7 @@ async def cancel_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
     await query.message.delete()
     await query.message.chat.send_message(
         "❌ Bekor qilindi.",
-        reply_markup=main_menu_keyboard()
+        reply_markup=main_menu_keyboard(await is_admin(query.from_user.id))
     )
 
 
@@ -195,13 +196,25 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 
     await db.update_balance(user_id, -price)
 
+    # Asl narxni olamiz
+    original_price = 0.0
+    async with aiosqlite.connect(DB_PATH) as dbase:
+        async with dbase.execute(
+            "SELECT value FROM settings WHERE key=?",
+            (f"country_{country_code}_original",)
+        ) as cur:
+            row_orig = await cur.fetchone()
+            if row_orig:
+                original_price = float(row_orig[0])
+
     purchase_id = await db.create_purchase(
         user_id=user_id,
         country=country_code,
         country_name=country_name,
         number=number,
         hash_code=hash_code,
-        price=price
+        price=price,
+        original_price=original_price
     )
 
     from config import LOG_CHANNEL
@@ -212,7 +225,7 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
                 f"👤 Xaridor: {query.from_user.first_name} (<code>{user_id}</code>)\n"
                 f"🌍 Davlat: {country_name}\n"
                 f"📱 Raqam: <code>{number}</code>\n"
-                f"💵 Narxi: {price:.2f}$"
+                f"💵 Narxi: {int(price):,} so'm"
             )
             await context.bot.send_message(chat_id=LOG_CHANNEL, text=log_text, parse_mode="HTML")
         except Exception:
@@ -232,8 +245,8 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         f"✅ <b>Raqam muvaffaqiyatli sotib olindi!</b>\n\n"
         f"🌍 Davlat: {country_name}\n"
         f"📱 Raqam: <code>{number}</code>\n"
-        f"💵 Narxi: {price:.2f}$\n"
-        f"💰 Qolgan balans: {new_balance:.2f}$\n\n"
+        f"💵 Narxi: {int(price):,} so'm\n"
+        f"💰 Qolgan balans: {int(new_balance):,} so'm\n\n"
         f"📨 SMS kodni olish uchun tugmani bosing.",
         parse_mode="HTML",
         reply_markup=kbd
@@ -285,7 +298,7 @@ async def get_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"✅ <b>SMS Kod keldi!</b>\n\n"
         f"🌍 Davlat: {purchase['country_name']}\n"
         f"📱 Raqam: <code>{purchase['number']}</code>\n"
-        f"💵 Narxi: {purchase['price']:.2f}$\n"
+        f"💵 Narxi: {int(purchase['price']):,} so'm\n"
         f"💬 <b>Kod: <code>{code}</code></b>\n"
         f"🔑 Parol: <code>{password or 'Mavjud emas'}</code>\n\n"
         f"✅ Telegram ilovasida ushbu raqamni faollashtiring!",
