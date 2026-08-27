@@ -74,7 +74,7 @@ def admin_main_keyboard() -> ReplyKeyboardMarkup:
             ["➖ Balans ➕", "🚫 BAN ✅"],
             ["📢 Kanallar", "🌍 Davlatlar"],
             ["💳 Karta sozlash", "📨 Ommaviy xabar"],
-            ["⏳ Kutayotgan to'lovlar"],
+            ["👮‍♂️ Adminlar", "⏳ Kutayotgan to'lovlar"],
             ["🔙 Bosh menyuga"],
         ],
         resize_keyboard=True,

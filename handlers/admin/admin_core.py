@@ -7,7 +7,16 @@ from helpers import admin_main_keyboard, cancel_keyboard
 
 
 async def is_admin(user_id: int) -> bool:
-    return user_id in ADMIN_IDS
+    if user_id in ADMIN_IDS:
+        return True
+    
+    val = await db.get_setting("dynamic_admins")
+    if val:
+        admins = [int(x) for x in val.split(",") if x.strip()]
+        if user_id in admins:
+            return True
+            
+    return False
 
 
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):

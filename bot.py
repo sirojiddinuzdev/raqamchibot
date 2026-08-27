@@ -58,6 +58,10 @@ from handlers.admin import (
     adm_broadcast_handler,
     adm_pending_deps_handler,
     adm_confirm_dep_callback,
+    adm_admins_handler,
+    adm_add_admin_callback,
+    adm_remove_admin_callback,
+    adm_del_admin_callback,
     admin_text_handler,
 )
 
@@ -98,6 +102,31 @@ async def universal_text_handler(update: Update, context: ContextTypes.DEFAULT_T
         if adm_action:
             from handlers.admin import admin_text_handler
             await admin_text_handler(update, context)
+            return
+
+    # Foydalanuvchi summa kiritayotganda
+    if context.user_data.get("awaiting_deposit_amount"):
+        if update.message.text == "❌ Bekor qilish":
+            context.user_data.clear()
+            from handlers.user import back_to_main_handler
+            await back_to_main_handler(update, context)
+            return
+        
+        try:
+            amount_text = update.message.text.replace(" ", "").replace(",", "").replace(".", "")
+            amount = int(amount_text)
+            if amount < 1000:
+                await update.message.reply_text("❌ Eng kam to'lov summasi 1,000 so'm.")
+                return
+            context.user_data["deposit_amount"] = amount
+            context.user_data.pop("awaiting_deposit_amount", None)
+            
+            # Endi rasm so'rash
+            from handlers.user.user_deposit import start_deposit_process
+            await start_deposit_process(update, context)
+            return
+        except ValueError:
+            await update.message.reply_text("❌ Noto'g'ri summa kiritildi. Iltimos, faqat raqamlardan foydalaning.")
             return
 
     # Foydalanuvchi chek yuborish holatida
@@ -167,6 +196,7 @@ def main():
     app.add_handler(MessageHandler(filters.Regex("^💳 Karta sozlash$"), adm_set_card_handler))
     app.add_handler(MessageHandler(filters.Regex("^📨 Ommaviy xabar$"), adm_broadcast_handler))
     app.add_handler(MessageHandler(filters.Regex("^⏳ Kutayotgan to'lovlar$"), adm_pending_deps_handler))
+    app.add_handler(MessageHandler(filters.Regex("^👮‍♂️ Adminlar$"), adm_admins_handler))
 
     # ── Qolgan Inline Callback lar ──
     app.add_handler(CallbackQueryHandler(check_subscription_callback, pattern="^check_sub$"))
@@ -192,6 +222,9 @@ def main():
     app.add_handler(CallbackQueryHandler(adm_remove_country_list_callback, pattern="^adm_remove_country_list$"))
     app.add_handler(CallbackQueryHandler(adm_del_country_callback, pattern=r"^adm_del_country_"))
     app.add_handler(CallbackQueryHandler(adm_confirm_dep_callback, pattern=r"^adm_confirm_dep_\d+$"))
+    app.add_handler(CallbackQueryHandler(adm_add_admin_callback, pattern="^adm_add_admin$"))
+    app.add_handler(CallbackQueryHandler(adm_remove_admin_callback, pattern="^adm_remove_admin$"))
+    app.add_handler(CallbackQueryHandler(adm_del_admin_callback, pattern=r"^adm_del_adm_\d+$"))
 
     # ── Matn va media kiritish uchun handlerlar ──
     app.add_handler(MessageHandler(

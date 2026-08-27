@@ -33,6 +33,12 @@ from .admin_deposits import (
     adm_pending_deps_handler,
     adm_confirm_dep_callback
 )
+from .admin_admins import (
+    adm_admins_handler,
+    adm_add_admin_callback,
+    adm_remove_admin_callback,
+    adm_del_admin_callback,
+)
 from .admin_text_handler import admin_text_handler
 
 __all__ = [
@@ -46,6 +52,9 @@ __all__ = [
     "adm_ban_handler",
     "adm_unban_handler",
     "prompt_user_id_handler",
+    "adm_ban_menu_handler",
+    "adm_balance_menu_handler",
+    "adm_users_page_callback",
     "adm_countries_handler",
     "adm_add_country_list_callback",
     "adm_edit_country_list_callback",
@@ -60,5 +69,9 @@ __all__ = [
     "adm_set_card_handler",
     "adm_pending_deps_handler",
     "adm_confirm_dep_callback",
+    "adm_admins_handler",
+    "adm_add_admin_callback",
+    "adm_remove_admin_callback",
+    "adm_del_admin_callback",
     "admin_text_handler",
 ]

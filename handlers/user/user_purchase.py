@@ -222,7 +222,7 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         try:
             log_text = (
                 f"🛒 <b>Yangi xarid!</b>\n\n"
-                f"👤 Xaridor: {query.from_user.first_name} (<code>{user_id}</code>)\n"
+                f"👤 Xaridor: <a href='tg://user?id={user_id}'>{query.from_user.first_name}</a> (<code>{user_id}</code>)\n"
                 f"🌍 Davlat: {country_name}\n"
                 f"📱 Raqam: <code>{number}</code>\n"
                 f"💵 Narxi: {int(price):,} so'm"

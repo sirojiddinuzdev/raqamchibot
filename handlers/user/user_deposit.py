@@ -13,11 +13,23 @@ async def deposit_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     card_number = await db.get_setting("card_number")
-    card_owner = await db.get_setting("card_owner")
-
     if not card_number:
         await update.message.reply_text("❌ Hozircha hisobni to'ldirish imkonsiz. Adminga murojaat qiling.")
         return
+
+    context.user_data["awaiting_deposit_amount"] = True
+    await update.message.reply_text(
+        "💰 <b>Qancha summa o'tkazmoqchisiz?</b>\n\nIltimos, summani raqamlarda kiriting (masalan: 50000):",
+        parse_mode="HTML",
+        reply_markup=cancel_keyboard()
+    )
+
+
+async def start_deposit_process(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Summa kiritilgandan keyin kartani ko'rsatish va rasmni kutish"""
+    card_number = await db.get_setting("card_number")
+    card_owner = await db.get_setting("card_owner")
+    amount = context.user_data.get("deposit_amount", 0)
 
     context.user_data["awaiting_deposit_check"] = True
     
@@ -31,12 +43,13 @@ async def deposit_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if context.user_data.get("awaiting_deposit_check") and context.user_data.get("deposit_session_id") == s_id:
             context.user_data.pop("awaiting_deposit_check", None)
             context.user_data.pop("deposit_session_id", None)
+            context.user_data.pop("deposit_amount", None)
             from helpers import main_menu_keyboard
             try:
                 is_admin_user = await is_admin(chat_id)
                 await context.bot.send_message(
                     chat_id=chat_id,
-                    text="⏳ To'lov qilish uchun berilgan 5 daqiqa vaqt tugadi. To'lov bekor qilindi.",
+                    text="⏳ To'lov qilish uchun berilgan 5 daqiqa vaqt tugadi. Vaqtingiz yetmagan bo'lsa, qaytadan 'Hisobni to'ldirish' tugmasi orqali urinib ko'rishingiz mumkin.",
                     reply_markup=main_menu_keyboard(is_admin_user)
                 )
             except Exception:
@@ -46,9 +59,10 @@ async def deposit_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         f"💳 <b>Hisobni to'ldirish</b>\n\n"
+        f"Kiritilgan summa: <b>{amount:,} so'm</b>\n\n"
         f"Karta raqami: <code>{card_number}</code>\n"
         f"Qabul qiluvchi: <b>{card_owner}</b>\n\n"
-        f"👇 Kerakli summani o'tkazgach, to'lov <b>cheki (skrinshotini)</b> shu yerga yuboring.\n"
+        f"👇 Ushbu kartaga <b>{amount:,} so'm</b> o'tkazgach, to'lov <b>cheki (skrinshotini)</b> shu yerga yuboring.\n"
         f"⚠️ <i>Sizda to'lovni tasdiqlash uchun 5 daqiqa vaqt bor.</i>",
         parse_mode="HTML",
         reply_markup=cancel_keyboard()
@@ -66,6 +80,7 @@ async def deposit_check_handler(update: Update, context: ContextTypes.DEFAULT_TY
         return
 
     photo_file_id = update.message.photo[-1].file_id
+    amount = context.user_data.get("deposit_amount", 0)
 
     # Adminlarga xabar yuborish
     from config import ADMIN_IDS
@@ -76,7 +91,10 @@ async def deposit_check_handler(update: Update, context: ContextTypes.DEFAULT_TY
         reply_markup=cancel_keyboard()
     )
 
-    context.user_data["awaiting_deposit_check"] = False
+    context.user_data.pop("awaiting_deposit_check", None)
+    context.user_data.pop("deposit_session_id", None)
+    context.user_data.pop("deposit_amount", None)
+    
     from helpers import main_menu_keyboard
     await update.message.reply_text("🏠 Bosh menyu", reply_markup=main_menu_keyboard(await is_admin(user.id)))
 
@@ -90,9 +108,10 @@ async def deposit_check_handler(update: Update, context: ContextTypes.DEFAULT_TY
                 photo=photo_file_id,
                 caption=(
                     f"📥 <b>Yangi to'lov cheki!</b>\n\n"
-                    f"👤 Foydalanuvchi: {user.full_name}\n"
+                    f"👤 Foydalanuvchi: <a href='tg://user?id={user.id}'>{user.full_name}</a>\n"
                     f"🆔 ID: <code>{user.id}</code>\n"
-                    f"Username: @{user.username if user.username else 'yoq'}\n\n"
+                    f"Username: @{user.username if user.username else 'yoq'}\n"
+                    f"So'ralgan summa: <b>{amount:,} so'm</b>\n\n"
                     f"👇 Tasdiqlash uchun pastdagi tugmani bosing va summani yozing."
                 ),
                 parse_mode="HTML",
@@ -100,3 +119,4 @@ async def deposit_check_handler(update: Update, context: ContextTypes.DEFAULT_TY
             )
         except Exception:
             pass
+

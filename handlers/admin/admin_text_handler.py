@@ -155,3 +155,32 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         context.user_data.pop("adm_action", None)
         context.user_data.pop("target_country", None)
         context.user_data.pop("target_country_name", None)
+
+    elif action == "add_admin":
+        try:
+            aid = int(text.strip())
+            
+            val = await db.get_setting("dynamic_admins")
+            admins = [int(x) for x in val.split(",") if x.strip()] if val else []
+            
+            if aid in ADMIN_IDS or aid in admins:
+                await update.message.reply_text("❌ Ushbu foydalanuvchi allaqachon admin.", reply_markup=admin_main_keyboard())
+            else:
+                admins.append(aid)
+                new_val = ",".join(map(str, admins))
+                await db.set_setting("dynamic_admins", new_val)
+                
+                # Try sending message to new admin
+                try:
+                    await context.bot.send_message(
+                        chat_id=aid,
+                        text="🎉 Siz botga admin qilib tayinlandingiz! Bosh menyuni ochish uchun /start ni bosing."
+                    )
+                except Exception:
+                    pass
+                
+                await update.message.reply_text(f"✅ ID {aid} admin qilib tayinlandi.", reply_markup=admin_main_keyboard())
+        except ValueError:
+            await update.message.reply_text("❌ ID raqam bo'lishi kerak.", reply_markup=admin_main_keyboard())
+            
+        context.user_data.pop("adm_action", None)
