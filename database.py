@@ -123,6 +123,17 @@ async def update_balance(user_id: int, delta: float):
         await db.commit()
 
 
+async def decrease_balance(user_id: int, amount: float) -> bool:
+    """Balansdan pul yechish (agar yetarli bo'lsa), muvaffaqiyatli bo'lsa True qaytaradi"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        cur = await db.execute(
+            "UPDATE users SET balance = balance - ? WHERE user_id = ? AND balance >= ?",
+            (amount, user_id, amount)
+        )
+        await db.commit()
+        return cur.rowcount > 0
+
+
 async def set_balance(user_id: int, amount: float):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(

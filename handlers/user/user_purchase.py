@@ -32,7 +32,7 @@ async def buy_number_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     # DB dan faqat admin qo'shgan davlatlarni olish
     async with aiosqlite.connect(DB_PATH) as dbase:
         async with dbase.execute(
-            "SELECT key, value FROM settings WHERE key LIKE 'country_%'"
+            "SELECT key, value FROM settings WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"
         ) as cur:
             rows = await cur.fetchall()
 
@@ -73,7 +73,7 @@ async def country_page_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
     async with aiosqlite.connect(DB_PATH) as dbase:
         async with dbase.execute(
-            "SELECT key, value FROM settings WHERE key LIKE 'country_%'"
+            "SELECT key, value FROM settings WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"
         ) as cur:
             rows = await cur.fetchall()
 
@@ -174,8 +174,8 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         await query.message.edit_text("❌ Xatolik. Qaytadan urinib ko'ring.")
         return
 
-    balance = user_data["balance"] if user_data else 0.0
-    if balance < price:
+    # Atomic balance deduction
+    if not await db.decrease_balance(user_id, price):
         await query.answer("❌ Balansingiz yetarli emas!", show_alert=True)
         return
 
@@ -184,17 +184,18 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     result = await spider.get_number(country_code)
 
     if not result:
+        # Refund on failure
+        await db.update_balance(user_id, price)
         await query.message.edit_text(
             f"❌ <b>Bu davlat uchun raqam topilmadi!</b>\n"
-            f"Boshqa davlatni tanlang yoki keyinroq urinib ko'ring.",
+            f"Boshqa davlatni tanlang yoki keyinroq urinib ko'ring.\n"
+            f"(Pulingiz hisobingizga qaytarildi)",
             parse_mode="HTML"
         )
         return
 
     number = result["number"]
     hash_code = result["hash_code"]
-
-    await db.update_balance(user_id, -price)
 
     # Asl narxni olamiz
     original_price = 0.0
@@ -224,7 +225,7 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
                 f"🛒 <b>Yangi xarid!</b>\n\n"
                 f"👤 Xaridor: <a href='tg://user?id={user_id}'>{query.from_user.first_name}</a> (<code>{user_id}</code>)\n"
                 f"🌍 Davlat: {country_name}\n"
-                f"📱 Raqam: <code>{number}</code>\n"
+                f"📱 Raqam: <code>{number[:-4]}****</code>\n"
                 f"💵 Narxi: {int(price):,} so'm"
             )
             await context.bot.send_message(chat_id=LOG_CHANNEL, text=log_text, parse_mode="HTML")
@@ -281,12 +282,17 @@ async def get_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         kbd = InlineKeyboardMarkup([[
             InlineKeyboardButton("🔄 Qayta tekshirish", callback_data=f"get_code_{purchase_id}")
         ]])
-        await query.message.edit_text(
-            "⏳ <b>SMS kod hali kelmadi.</b>\n\n"
-            "Biroz kuting va qayta tekshiring (1–3 daqiqa).",
-            parse_mode="HTML",
-            reply_markup=kbd
-        )
+        from datetime import datetime
+        now_str = datetime.now().strftime("%H:%M:%S")
+        try:
+            await query.message.edit_text(
+                f"⏳ <b>SMS kod hali kelmadi.</b> ({now_str})\n\n"
+                "Biroz kuting va qayta tekshiring (1–3 daqiqa).",
+                parse_mode="HTML",
+                reply_markup=kbd
+            )
+        except Exception:
+            pass
         return
 
     code = result["code"]

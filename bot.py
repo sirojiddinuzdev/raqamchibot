@@ -58,6 +58,7 @@ from handlers.admin import (
     adm_broadcast_handler,
     adm_pending_deps_handler,
     adm_confirm_dep_callback,
+    adm_reject_dep_callback,
     adm_admins_handler,
     adm_add_admin_callback,
     adm_remove_admin_callback,
@@ -90,16 +91,17 @@ async def universal_text_handler(update: Update, context: ContextTypes.DEFAULT_T
     """Matn handlerlarini to'g'ri yo'naltirish"""
     user_id = update.effective_user.id
 
+    from handlers.admin.admin_core import is_admin
     # Admin action lari uchun
-    if user_id in ADMIN_IDS:
+    if await is_admin(user_id):
         adm_action = context.user_data.get("adm_action", "")
-        # Bekor qilish tugmasi
-        if update.message.text == "❌ Bekor qilish":
-            context.user_data.clear()
-            from helpers import admin_main_keyboard
-            await update.message.reply_text("Bekor qilindi.", reply_markup=admin_main_keyboard())
-            return
         if adm_action:
+            # Bekor qilish tugmasi admin amali uchun
+            if update.message.text == "❌ Bekor qilish":
+                context.user_data.clear()
+                from helpers import admin_main_keyboard
+                await update.message.reply_text("Bekor qilindi.", reply_markup=admin_main_keyboard())
+                return
             from handlers.admin import admin_text_handler
             await admin_text_handler(update, context)
             return
@@ -108,7 +110,6 @@ async def universal_text_handler(update: Update, context: ContextTypes.DEFAULT_T
     if context.user_data.get("awaiting_deposit_amount"):
         if update.message.text == "❌ Bekor qilish":
             context.user_data.clear()
-            from handlers.user import back_to_main_handler
             await back_to_main_handler(update, context)
             return
         
@@ -142,10 +143,33 @@ async def universal_text_handler(update: Update, context: ContextTypes.DEFAULT_T
         )
 
 
-async def universal_photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Rasm/dokument handleri (chek uchun)"""
+async def universal_media_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Media (rasm/video/ovozli) handler"""
+    user_id = update.effective_user.id
+    
+    # Chek kutilayotgan bo'lsa
     if context.user_data.get("awaiting_deposit_check"):
-        await deposit_check_handler(update, context)
+        if update.message.photo or update.message.document:
+            from handlers.user.user_deposit import deposit_check_handler
+            await deposit_check_handler(update, context)
+        else:
+            await update.message.reply_text("❌ Iltimos, to'lov chekini rasm yoki fayl ko'rinishida yuboring.")
+        return
+        
+    # Agar admin xabar yozish holatida bo'lsa
+    adm_action = context.user_data.get("adm_action")
+    if adm_action:
+        if adm_action == "broadcast":
+            from handlers.admin.admin_text_handler import admin_text_handler
+            await admin_text_handler(update, context)
+        else:
+            await update.message.reply_text("❌ Iltimos, faqat matn yuboring.")
+        return
+        
+    # Agar foydalanuvchi summa kiritishi kerak bo'lsa
+    if context.user_data.get("awaiting_deposit_amount"):
+        await update.message.reply_text("❌ Iltimos, summani matn ko'rinishida raqamlar bilan yuboring.")
+        return
 
 
 # ─── Bot buyruqlarini sozlash ─────────────────────────────────
@@ -221,7 +245,8 @@ def main():
     app.add_handler(CallbackQueryHandler(adm_pick_country_callback, pattern=r"^adm_pick_country_"))
     app.add_handler(CallbackQueryHandler(adm_remove_country_list_callback, pattern="^adm_remove_country_list$"))
     app.add_handler(CallbackQueryHandler(adm_del_country_callback, pattern=r"^adm_del_country_"))
-    app.add_handler(CallbackQueryHandler(adm_confirm_dep_callback, pattern=r"^adm_confirm_dep_\d+$"))
+    app.add_handler(CallbackQueryHandler(adm_confirm_dep_callback, pattern=r"^confirm_dep_"))
+    app.add_handler(CallbackQueryHandler(adm_reject_dep_callback, pattern=r"^reject_dep_"))
     app.add_handler(CallbackQueryHandler(adm_add_admin_callback, pattern="^adm_add_admin$"))
     app.add_handler(CallbackQueryHandler(adm_remove_admin_callback, pattern="^adm_remove_admin$"))
     app.add_handler(CallbackQueryHandler(adm_del_admin_callback, pattern=r"^adm_del_adm_\d+$"))
@@ -232,8 +257,8 @@ def main():
         universal_text_handler
     ))
     app.add_handler(MessageHandler(
-        filters.PHOTO | filters.Document.ALL,
-        universal_photo_handler
+        ~filters.TEXT & ~filters.COMMAND,
+        universal_media_handler
     ))
 
     logger.info("🤖 Raqamchi Bot ishga tushdi!")

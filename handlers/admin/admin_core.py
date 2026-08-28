@@ -19,6 +19,15 @@ async def is_admin(user_id: int) -> bool:
     return False
 
 
+async def get_all_admin_ids() -> list:
+    admins = list(ADMIN_IDS)
+    val = await db.get_setting("dynamic_admins")
+    if val:
+        dyn = [int(x) for x in val.split(",") if x.strip()]
+        admins.extend(dyn)
+    return list(set(admins))
+
+
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Admin panelga kirish /admin"""
     user_id = update.effective_user.id

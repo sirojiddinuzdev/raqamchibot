@@ -93,11 +93,61 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                     )
                 except Exception:
                     pass
+                
+                # Delete buttons from all admins
+                dep_id = context.user_data.get("target_dep_id")
+                if dep_id and "deposits" in context.bot_data and dep_id in context.bot_data["deposits"]:
+                    admin_msgs = context.bot_data["deposits"][dep_id]["admin_msgs"]
+                    for admin_id, msg_id in admin_msgs:
+                        try:
+                            await context.bot.edit_message_caption(
+                                chat_id=admin_id,
+                                message_id=msg_id,
+                                caption=f"✅ Bu to'lov admin {update.effective_user.first_name} (@{update.effective_user.username or 'yoq'}) tomonidan tasdiqlandi.\n💰 Summa: {int(amount):,} so'm."
+                            )
+                        except Exception:
+                            pass
+                    del context.bot_data["deposits"][dep_id]
+
         except ValueError:
             await update.message.reply_text("❌ Noto'g'ri summa kiritildi.", reply_markup=admin_main_keyboard())
         finally:
-            context.user_data.pop("adm_action", None)
-            context.user_data.pop("target_user", None)
+            if action in ["add_balance", "sub_balance"] or (action == "confirm_deposit" and "ValueError" not in str(locals().values())):
+                context.user_data.pop("adm_action", None)
+                context.user_data.pop("target_user", None)
+                context.user_data.pop("target_dep_id", None)
+
+    elif action == "reject_deposit":
+        uid = context.user_data.get("target_user")
+        reason = text if text.lower() != "izohsiz" else "Izohsiz"
+        await update.message.reply_text(f"❌ To'lov rad etildi. Sabab: {reason}", reply_markup=admin_main_keyboard())
+        try:
+            await context.bot.send_message(
+                chat_id=uid,
+                text=f"❌ <b>Sizning to'lovingiz qabul qilinmadi!</b>\n\nSabab: {reason}",
+                parse_mode="HTML"
+            )
+        except Exception:
+            pass
+        
+        # Delete buttons from all admins
+        dep_id = context.user_data.get("target_dep_id")
+        if dep_id and "deposits" in context.bot_data and dep_id in context.bot_data["deposits"]:
+            admin_msgs = context.bot_data["deposits"][dep_id]["admin_msgs"]
+            for admin_id, msg_id in admin_msgs:
+                try:
+                    await context.bot.edit_message_caption(
+                        chat_id=admin_id,
+                        message_id=msg_id,
+                        caption=f"❌ Bu to'lov admin {update.effective_user.first_name} (@{update.effective_user.username or 'yoq'}) tomonidan rad etildi.\nSabab: {reason}"
+                    )
+                except Exception:
+                    pass
+            del context.bot_data["deposits"][dep_id]
+        
+        context.user_data.pop("adm_action", None)
+        context.user_data.pop("target_user", None)
+        context.user_data.pop("target_dep_id", None)
 
     elif action == "add_channel":
         context.user_data["temp_channel_id"] = text

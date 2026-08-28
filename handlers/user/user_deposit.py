@@ -38,7 +38,9 @@ async def start_deposit_process(update: Update, context: ContextTypes.DEFAULT_TY
     session_id = time.time()
     context.user_data["deposit_session_id"] = session_id
 
-    async def deposit_timeout(chat_id, s_id):
+    is_admin_user = await is_admin(update.effective_chat.id)
+
+    async def deposit_timeout(chat_id, s_id, is_admin_flag):
         await asyncio.sleep(300)
         if context.user_data.get("awaiting_deposit_check") and context.user_data.get("deposit_session_id") == s_id:
             context.user_data.pop("awaiting_deposit_check", None)
@@ -46,16 +48,15 @@ async def start_deposit_process(update: Update, context: ContextTypes.DEFAULT_TY
             context.user_data.pop("deposit_amount", None)
             from helpers import main_menu_keyboard
             try:
-                is_admin_user = await is_admin(chat_id)
                 await context.bot.send_message(
                     chat_id=chat_id,
                     text="⏳ To'lov qilish uchun berilgan 5 daqiqa vaqt tugadi. Vaqtingiz yetmagan bo'lsa, qaytadan 'Hisobni to'ldirish' tugmasi orqali urinib ko'rishingiz mumkin.",
-                    reply_markup=main_menu_keyboard(is_admin_user)
+                    reply_markup=main_menu_keyboard(is_admin_flag)
                 )
             except Exception:
                 pass
 
-    asyncio.create_task(deposit_timeout(update.effective_chat.id, session_id))
+    asyncio.create_task(deposit_timeout(update.effective_chat.id, session_id, is_admin_user))
 
     await update.message.reply_text(
         f"💳 <b>Hisobni to'ldirish</b>\n\n"
@@ -73,18 +74,28 @@ async def deposit_check_handler(update: Update, context: ContextTypes.DEFAULT_TY
     """Foydalanuvchidan to'lov chekini (rasm) qabul qilish"""
     user = update.effective_user
 
-    if not update.message.photo:
+    if not update.message.photo and not update.message.document:
         await update.message.reply_text(
-            "❌ Iltimos, to'lov chekini (rasm/skrinshot) yuboring yoki '❌ Bekor qilish' tugmasini bosing."
+            "❌ Iltimos, to'lov chekini (rasm/skrinshot yoki fayl) yuboring yoki '❌ Bekor qilish' tugmasini bosing."
         )
         return
 
-    photo_file_id = update.message.photo[-1].file_id
+    if update.message.photo:
+        file_id = update.message.photo[-1].file_id
+        is_doc = False
+    else:
+        file_id = update.message.document.file_id
+        is_doc = True
+        
     amount = context.user_data.get("deposit_amount", 0)
 
     # Adminlarga xabar yuborish
-    from config import ADMIN_IDS
+    from handlers.admin.admin_core import get_all_admin_ids
     from telegram import InlineKeyboardMarkup, InlineKeyboardButton
+    import time
+
+    all_admins = await get_all_admin_ids()
+    dep_id = f"dep_{user.id}_{int(time.time())}"
 
     await update.message.reply_text(
         "✅ To'lov chekingiz adminga yuborildi. Tez orada hisobingiz to'ldiriladi.",
@@ -98,25 +109,47 @@ async def deposit_check_handler(update: Update, context: ContextTypes.DEFAULT_TY
     from helpers import main_menu_keyboard
     await update.message.reply_text("🏠 Bosh menyu", reply_markup=main_menu_keyboard(await is_admin(user.id)))
 
-    for admin_id in ADMIN_IDS:
+    admin_msgs = []
+    for admin_id in all_admins:
         try:
-            kbd = InlineKeyboardMarkup([[
-                InlineKeyboardButton("✅ Tasdiqlash va pul qo'shish", callback_data=f"confirm_dep_{user.id}")
-            ]])
-            await context.bot.send_photo(
-                chat_id=admin_id,
-                photo=photo_file_id,
-                caption=(
-                    f"📥 <b>Yangi to'lov cheki!</b>\n\n"
-                    f"👤 Foydalanuvchi: <a href='tg://user?id={user.id}'>{user.full_name}</a>\n"
-                    f"🆔 ID: <code>{user.id}</code>\n"
-                    f"Username: @{user.username if user.username else 'yoq'}\n"
-                    f"So'ralgan summa: <b>{amount:,} so'm</b>\n\n"
-                    f"👇 Tasdiqlash uchun pastdagi tugmani bosing va summani yozing."
-                ),
-                parse_mode="HTML",
-                reply_markup=kbd
+            kbd = InlineKeyboardMarkup([
+                [InlineKeyboardButton("✅ Tasdiqlash va pul qo'shish", callback_data=f"confirm_dep_{dep_id}")],
+                [InlineKeyboardButton("❌ Qabul qilmaslik", callback_data=f"reject_dep_{dep_id}")]
+            ])
+            caption_text = (
+                f"📥 <b>Yangi to'lov cheki!</b>\n\n"
+                f"👤 Foydalanuvchi: <a href='tg://user?id={user.id}'>{user.full_name}</a>\n"
+                f"🆔 ID: <code>{user.id}</code>\n"
+                f"Username: @{user.username if user.username else 'yoq'}\n"
+                f"So'ralgan summa: <b>{amount:,} so'm</b>\n\n"
+                f"👇 Tasdiqlash yoki rad etish uchun pastdagi tugmani bosing."
             )
+            if is_doc:
+                msg = await context.bot.send_document(
+                    chat_id=admin_id,
+                    document=file_id,
+                    caption=caption_text,
+                    parse_mode="HTML",
+                    reply_markup=kbd
+                )
+            else:
+                msg = await context.bot.send_photo(
+                    chat_id=admin_id,
+                    photo=file_id,
+                    caption=caption_text,
+                    parse_mode="HTML",
+                    reply_markup=kbd
+                )
+            admin_msgs.append((admin_id, msg.message_id))
         except Exception:
             pass
+
+    if "deposits" not in context.bot_data:
+        context.bot_data["deposits"] = {}
+    
+    context.bot_data["deposits"][dep_id] = {
+        "user_id": user.id,
+        "amount": amount,
+        "admin_msgs": admin_msgs
+    }
 
