@@ -58,6 +58,13 @@ async def start_deposit_process(update: Update, context: ContextTypes.DEFAULT_TY
 
     asyncio.create_task(deposit_timeout(update.effective_chat.id, session_id, is_admin_user))
 
+    from telegram import InlineKeyboardMarkup, InlineKeyboardButton, CopyTextButton
+    kbd = InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"💳 {card_number}", copy_text=CopyTextButton(text=card_number.replace(" ", "")))],
+        [InlineKeyboardButton(f"💰 {amount:,} so'm", copy_text=CopyTextButton(text=str(amount)))],
+        [InlineKeyboardButton("❌ Bekor qilish", callback_data="cancel_deposit")]
+    ])
+
     await update.message.reply_text(
         f"💳 <b>Hisobni to'ldirish</b>\n\n"
         f"Kiritilgan summa: <b>{amount:,} so'm</b>\n\n"
@@ -66,7 +73,25 @@ async def start_deposit_process(update: Update, context: ContextTypes.DEFAULT_TY
         f"👇 Ushbu kartaga <b>{amount:,} so'm</b> o'tkazgach, to'lov <b>cheki (skrinshotini)</b> shu yerga yuboring.\n"
         f"⚠️ <i>Sizda to'lovni tasdiqlash uchun 5 daqiqa vaqt bor.</i>",
         parse_mode="HTML",
-        reply_markup=cancel_keyboard()
+        reply_markup=kbd
+    )
+
+async def cancel_deposit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    context.user_data.pop("awaiting_deposit_check", None)
+    context.user_data.pop("deposit_session_id", None)
+    context.user_data.pop("deposit_amount", None)
+    
+    await query.message.edit_text("❌ Hisobni to'ldirish bekor qilindi.")
+    from handlers.user.user_core import back_to_main_handler
+    from helpers import main_menu_keyboard
+    from handlers.admin.admin_core import is_admin
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="🏠 Bosh menyu",
+        reply_markup=main_menu_keyboard(await is_admin(update.effective_user.id))
     )
 
 

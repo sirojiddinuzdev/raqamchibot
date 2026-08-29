@@ -23,6 +23,7 @@ from .admin_catalog import (
     adm_pick_country_callback,
     adm_remove_country_list_callback,
     adm_del_country_callback,
+    adm_back_to_catalog_callback,
     adm_channels_handler,
     adm_add_channel_callback,
     adm_remove_channel_callback,

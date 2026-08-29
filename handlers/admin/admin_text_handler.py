@@ -21,6 +21,14 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     text = update.message.text
 
     if text == "❌ Bekor qilish":
+        if action == "set_country_price":
+            context.user_data.pop("adm_action", None)
+            context.user_data.pop("target_country", None)
+            context.user_data.pop("target_country_name", None)
+            from handlers.admin.admin_catalog import adm_countries_handler
+            await adm_countries_handler(update, context)
+            return
+            
         context.user_data.pop("adm_action", None)
         await update.message.reply_text("Bekor qilindi.", reply_markup=admin_main_keyboard())
         return
@@ -199,12 +207,55 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 api_price_uzs = int(float(api_price) * EXCHANGE_RATE)
                 await db.set_setting(f"country_{c_code}_original", str(api_price_uzs))
                 
-            await update.message.reply_text(f"✅ <b>{c_name}</b> davlati {price:,} so'm narxda sotuvga qo'shildi.", parse_mode="HTML", reply_markup=admin_main_keyboard())
+            await update.message.reply_text(
+                f"✅ <b>{c_name}</b> davlati {price:,} so'm narxda sotuvga qo'shildi.",
+                parse_mode="HTML",
+                reply_markup=admin_main_keyboard()
+            )
+            
+            context.user_data.pop("adm_action", None)
+            context.user_data.pop("target_country", None)
+            context.user_data.pop("target_country_name", None)
+            
+            # Orqaga asosi menyuga emas, davlatlar ro'yxatiga qaytaramiz
+            from handlers.admin.admin_catalog import adm_countries_handler
+            await adm_countries_handler(update, context)
+            
         except ValueError:
             await update.message.reply_text("❌ Noto'g'ri narx kiritildi.", reply_markup=admin_main_keyboard())
-        context.user_data.pop("adm_action", None)
-        context.user_data.pop("target_country", None)
-        context.user_data.pop("target_country_name", None)
+            context.user_data.pop("adm_action", None)
+            context.user_data.pop("target_country", None)
+            context.user_data.pop("target_country_name", None)
+
+    elif action == "add_promo":
+        try:
+            parts = update.message.text.split()
+            if len(parts) == 3:
+                code = parts[0].upper()
+                amount = float(parts[1])
+                max_uses = int(parts[2])
+            elif len(parts) == 2:
+                import string, random
+                code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                amount = float(parts[0])
+                max_uses = int(parts[1])
+            else:
+                await update.message.reply_text("❌ Noto'g'ri format.", reply_markup=admin_main_keyboard())
+                return
+                
+            await db.create_promocode(code, amount, max_uses)
+            await update.message.reply_text(
+                f"✅ <b>Promokod yaratildi!</b>\n\n"
+                f"🔖 Kod: <code>{code}</code>\n"
+                f"💰 Summa: {int(amount):,} so'm\n"
+                f"👥 Foydalanishlar soni: {max_uses} marta",
+                parse_mode="HTML",
+                reply_markup=admin_main_keyboard()
+            )
+            context.user_data.pop("adm_action", None)
+        except Exception as e:
+            await update.message.reply_text(f"❌ Xatolik yuz berdi: {str(e)}", reply_markup=admin_main_keyboard())
+            context.user_data.pop("adm_action", None)
 
     elif action == "add_admin":
         try:

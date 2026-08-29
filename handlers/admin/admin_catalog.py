@@ -23,6 +23,9 @@ async def adm_countries_handler(update: Update, context: ContextTypes.DEFAULT_TY
         async with dbase.execute("SELECT key, value FROM settings WHERE key LIKE 'country_%'") as cur:
             rows = await cur.fetchall()
 
+    rows = [r for r in rows if not r[0].endswith("_original")]
+    rows.sort(key=lambda r: get_country_name(r[0].replace("country_", "")))
+
     api_countries = await spider.get_countries()
 
     text = "🌍 <b>Sotuvdagi davlatlar ro'yxati (Botda):</b>\n\n"
@@ -45,7 +48,16 @@ async def adm_countries_handler(update: Update, context: ContextTypes.DEFAULT_TY
         [InlineKeyboardButton("✏️ Tahrirlash", callback_data="adm_edit_country_list")],
         [InlineKeyboardButton("➖ Davlatni o'chirish", callback_data="adm_remove_country_list")]
     ])
-    await update.message.reply_text(text, parse_mode="HTML", reply_markup=kbd)
+    
+    if update.callback_query:
+        await update.callback_query.message.edit_text(text, parse_mode="HTML", reply_markup=kbd)
+    else:
+        await update.message.reply_text(text, parse_mode="HTML", reply_markup=kbd)
+
+async def adm_back_to_catalog_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await adm_countries_handler(update, context)
 
 
 async def adm_add_country_list_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -68,7 +80,7 @@ async def adm_add_country_list_callback(update: Update, context: ContextTypes.DE
         price_uzs = int(float(price) * EXCHANGE_RATE)
         items.append((f"adm_pick_country_{code}", f"{name} ({price_uzs:,} so'm)"))
 
-    kbd = paginated_keyboard(items, 0, per_page=15, prefix="adm_clist")
+    kbd = paginated_keyboard(items, 0, per_page=15, prefix="adm_clist", back_callback="adm_back_to_catalog")
     await query.message.edit_text(
         "🌍 <b>Qo'shish uchun davlatni tanlang:</b>",
         parse_mode="HTML",
@@ -89,7 +101,7 @@ async def adm_clist_page_callback(update: Update, context: ContextTypes.DEFAULT_
         price_uzs = int(float(price) * EXCHANGE_RATE)
         items.append((f"adm_pick_country_{code}", f"{name} ({price_uzs:,} so'm)"))
 
-    kbd = paginated_keyboard(items, page, per_page=15, prefix="adm_clist")
+    kbd = paginated_keyboard(items, page, per_page=15, prefix="adm_clist", back_callback="adm_back_to_catalog")
     await query.message.edit_reply_markup(reply_markup=kbd)
 
 
@@ -126,6 +138,9 @@ async def adm_edit_country_list_callback(update: Update, context: ContextTypes.D
         async with dbase.execute("SELECT key FROM settings WHERE key LIKE 'country_%'") as cur:
             rows = await cur.fetchall()
 
+    rows = [r for r in rows if not r[0].endswith("_original")]
+    rows.sort(key=lambda r: get_country_name(r[0].replace("country_", "")))
+
     if not rows:
         await query.message.edit_text("❌ Hozircha davlatlar qo'shilmagan.")
         return
@@ -143,6 +158,8 @@ async def adm_edit_country_list_callback(update: Update, context: ContextTypes.D
     kbd_buttons = []
     for cb_data, btn_text in items:
         kbd_buttons.append([InlineKeyboardButton(btn_text, callback_data=cb_data)])
+        
+    kbd_buttons.append([InlineKeyboardButton("🔙 Orqaga", callback_data="adm_back_to_catalog")])
 
     await query.message.edit_text(
         "✏️ <b>Narxini tahrirlash uchun davlatni tanlang:</b>",
@@ -159,6 +176,9 @@ async def adm_remove_country_list_callback(update: Update, context: ContextTypes
         async with dbase.execute("SELECT key FROM settings WHERE key LIKE 'country_%'") as cur:
             rows = await cur.fetchall()
 
+    rows = [r for r in rows if not r[0].endswith("_original")]
+    rows.sort(key=lambda r: get_country_name(r[0].replace("country_", "")))
+
     if not rows:
         await query.message.edit_text("❌ Hozircha davlatlar qo'shilmagan.")
         return
@@ -173,6 +193,8 @@ async def adm_remove_country_list_callback(update: Update, context: ContextTypes
     kbd_buttons = []
     for cb_data, btn_text in items:
         kbd_buttons.append([InlineKeyboardButton(btn_text, callback_data=cb_data)])
+        
+    kbd_buttons.append([InlineKeyboardButton("🔙 Orqaga", callback_data="adm_back_to_catalog")])
 
     await query.message.edit_text(
         "❌ <b>O'chirish uchun davlatni tanlang:</b>",

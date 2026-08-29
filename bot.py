@@ -23,14 +23,16 @@ from handlers.user import (
     my_balance_handler,
     contact_admin_handler,
     deposit_handler,
-    deposit_check_handler,
     buy_number_handler,
     country_page_callback,
     select_country_callback,
     cancel_buy_callback,
     confirm_buy_callback,
     get_code_callback,
+    top_10_countries_callback,
+    cancel_deposit_callback,
 )
+from handlers.user.user_promocode import user_promo_handler
 from handlers.admin import (
     admin_panel,
     adm_stats_handler,
@@ -54,6 +56,7 @@ from handlers.admin import (
     adm_pick_country_callback,
     adm_remove_country_list_callback,
     adm_del_country_callback,
+    adm_back_to_catalog_callback,
     adm_set_card_handler,
     adm_broadcast_handler,
     adm_pending_deps_handler,
@@ -63,7 +66,13 @@ from handlers.admin import (
     adm_add_admin_callback,
     adm_remove_admin_callback,
     adm_del_admin_callback,
-    admin_text_handler,
+)
+from handlers.admin.admin_promocodes import (
+    adm_promocodes_handler,
+    adm_add_promo_callback,
+    adm_del_promo_callback,
+    adm_del_promo_confirm_callback,
+    adm_promo_back_callback,
 )
 
 # Logging
@@ -141,6 +150,18 @@ async def universal_text_handler(update: Update, context: ContextTypes.DEFAULT_T
             "📸 Iltimos, chek <b>rasmini</b> yoki faylini yuboring.",
             parse_mode="HTML"
         )
+        return
+
+    # Foydalanuvchi promo kod kiritishi
+    user_action = context.user_data.get("user_action")
+    if user_action == "use_promo":
+        if update.message.text == "❌ Bekor qilish":
+            context.user_data.clear()
+            await back_to_main_handler(update, context)
+            return
+        from handlers.user.user_promocode import user_promo_text_handler
+        await user_promo_text_handler(update, context)
+        return
 
 
 async def universal_media_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -169,6 +190,11 @@ async def universal_media_handler(update: Update, context: ContextTypes.DEFAULT_
     # Agar foydalanuvchi summa kiritishi kerak bo'lsa
     if context.user_data.get("awaiting_deposit_amount"):
         await update.message.reply_text("❌ Iltimos, summani matn ko'rinishida raqamlar bilan yuboring.")
+        return
+        
+    # Agar foydalanuvchi promo kod kiritishi kerak bo'lsa
+    if context.user_data.get("user_action") == "use_promo":
+        await update.message.reply_text("❌ Iltimos, promokodni matn ko'rinishida yuboring.")
         return
 
 
@@ -205,6 +231,7 @@ def main():
     app.add_handler(MessageHandler(filters.Regex("^💰 Hisobim$"), my_balance_handler))
     app.add_handler(MessageHandler(filters.Regex("^📞 Admin bilan bog'lanish$"), contact_admin_handler))
     app.add_handler(MessageHandler(filters.Regex("^🔙 Bosh menyuga$"), back_to_main_handler))
+    app.add_handler(MessageHandler(filters.Regex("^🎁 Promokod$"), user_promo_handler))
 
     # ── Reply Keyboard matnlari (Admin) ──
     app.add_handler(MessageHandler(filters.Regex("^📊 Statistika$"), adm_stats_handler))
@@ -221,14 +248,17 @@ def main():
     app.add_handler(MessageHandler(filters.Regex("^📨 Ommaviy xabar$"), adm_broadcast_handler))
     app.add_handler(MessageHandler(filters.Regex("^⏳ Kutayotgan to'lovlar$"), adm_pending_deps_handler))
     app.add_handler(MessageHandler(filters.Regex("^👮‍♂️ Adminlar$"), adm_admins_handler))
+    app.add_handler(MessageHandler(filters.Regex("^🎁 Promokodlar$"), adm_promocodes_handler))
 
     # ── Qolgan Inline Callback lar ──
     app.add_handler(CallbackQueryHandler(check_subscription_callback, pattern="^check_sub$"))
     app.add_handler(CallbackQueryHandler(country_page_callback, pattern=r"^page_country_\d+$"))
     app.add_handler(CallbackQueryHandler(select_country_callback, pattern=r"^select_country_"))
     app.add_handler(CallbackQueryHandler(cancel_buy_callback, pattern="^cancel_buy$"))
-    app.add_handler(CallbackQueryHandler(confirm_buy_callback, pattern="^confirm_buy$"))
-    app.add_handler(CallbackQueryHandler(get_code_callback, pattern=r"^get_code_\d+$"))
+    app.add_handler(CallbackQueryHandler(confirm_buy_callback, pattern=r"^confirm_buy_"))
+    app.add_handler(CallbackQueryHandler(get_code_callback, pattern=r"^get_code_"))
+    app.add_handler(CallbackQueryHandler(cancel_deposit_callback, pattern="^cancel_deposit$"))
+    app.add_handler(CallbackQueryHandler(top_10_countries_callback, pattern="^top_10_countries$"))
     app.add_handler(CallbackQueryHandler(adm_users_page_callback, pattern=r"^adm_users_page_\d+$"))
 
     app.add_handler(CallbackQueryHandler(adm_add_balance_handler, pattern=r"^adm_add_bal_\d+$"))
@@ -245,11 +275,17 @@ def main():
     app.add_handler(CallbackQueryHandler(adm_pick_country_callback, pattern=r"^adm_pick_country_"))
     app.add_handler(CallbackQueryHandler(adm_remove_country_list_callback, pattern="^adm_remove_country_list$"))
     app.add_handler(CallbackQueryHandler(adm_del_country_callback, pattern=r"^adm_del_country_"))
+    app.add_handler(CallbackQueryHandler(adm_back_to_catalog_callback, pattern="^adm_back_to_catalog$"))
     app.add_handler(CallbackQueryHandler(adm_confirm_dep_callback, pattern=r"^confirm_dep_"))
     app.add_handler(CallbackQueryHandler(adm_reject_dep_callback, pattern=r"^reject_dep_"))
     app.add_handler(CallbackQueryHandler(adm_add_admin_callback, pattern="^adm_add_admin$"))
     app.add_handler(CallbackQueryHandler(adm_remove_admin_callback, pattern="^adm_remove_admin$"))
     app.add_handler(CallbackQueryHandler(adm_del_admin_callback, pattern=r"^adm_del_adm_\d+$"))
+    
+    app.add_handler(CallbackQueryHandler(adm_add_promo_callback, pattern="^adm_add_promo$"))
+    app.add_handler(CallbackQueryHandler(adm_del_promo_callback, pattern="^adm_del_promo$"))
+    app.add_handler(CallbackQueryHandler(adm_del_promo_confirm_callback, pattern=r"^adm_del_promo_"))
+    app.add_handler(CallbackQueryHandler(adm_promo_back_callback, pattern="^adm_promo_back$"))
 
     # ── Matn va media kiritish uchun handlerlar ──
     app.add_handler(MessageHandler(

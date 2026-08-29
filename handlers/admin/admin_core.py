@@ -54,22 +54,44 @@ async def adm_stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Qisqa hisobot uchun eng so'nggi xaridlarni va umumiysini sanash kerak
     # DB dan barcha xaridlarni count va sum qilish mumkin:
+    completed_purchases = 0
+    total_income = 0.0
+    total_original = 0.0
+    top_country = "Yo'q"
+
     import aiosqlite
     from database import DB_PATH
     async with aiosqlite.connect(DB_PATH) as dbase:
+        dbase.row_factory = aiosqlite.Row
         async with dbase.execute(
-            "SELECT COUNT(*), SUM(price), SUM(original_price) FROM purchases WHERE status='completed'"
+            "SELECT country, SUM(price) as tot, COUNT(*) as c FROM purchases WHERE status='completed' GROUP BY country"
         ) as cur:
-            row = await cur.fetchone()
-            completed_purchases = row[0] or 0
-            total_income = row[1] or 0.0
-            total_original = row[2] or 0.0
-            profit = total_income - total_original
+            rows = await cur.fetchall()
+
+    if rows:
+        top_row = max(rows, key=lambda x: x["c"])
+        from countries import get_country_name
+        top_country = get_country_name(top_row["country"])
+
+        for r in rows:
+            c = r["country"]
+            count = r["c"]
+            tot = r["tot"]
+
+            completed_purchases += count
+            total_income += tot
+
+            orig = await db.get_setting(f"country_{c}_original")
+            if orig:
+                total_original += (float(orig) * count)
+
+    profit = total_income - total_original
 
     text = (
         f"📊 <b>Bot Statistikasi</b>\n\n"
         f"👥 Umumiy foydalanuvchilar: <b>{total_users}</b>\n"
         f"✅ Sotilgan raqamlar: <b>{completed_purchases}</b> ta\n"
+        f"👑 Eng ko'p sotilgan davlat: <b>{top_country}</b>\n"
         f"💵 Asl narxi (Tan narxi): <b>{int(total_original):,} so'm</b>\n"
         f"💰 Biz sotgan narx: <b>{int(total_income):,} so'm</b>\n"
         f"📈 Sof foyda: <b>{int(profit):,} so'm</b>"

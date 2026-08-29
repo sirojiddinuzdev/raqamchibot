@@ -58,7 +58,7 @@ async def init_db():
             )
         """)
 
-        await db.execute("""
+        await db.execute('''
             CREATE TABLE IF NOT EXISTS channels (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 channel_id  TEXT    UNIQUE,
@@ -66,7 +66,26 @@ async def init_db():
                 channel_link TEXT,
                 added_at    TEXT    DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        ''')
+        
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS promocodes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                code TEXT UNIQUE,
+                amount REAL,
+                uses INTEGER DEFAULT 0,
+                max_uses INTEGER DEFAULT 1,
+                expires_at TEXT
+            )
+        ''')
+
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS promocode_uses (
+                user_id INTEGER,
+                promocode_id INTEGER,
+                UNIQUE(user_id, promocode_id)
+            )
+        ''')
 
         await db.execute("""
             CREATE TABLE IF NOT EXISTS settings (
@@ -378,3 +397,64 @@ async def get_stats() -> dict:
             stats["today_purchases"] = (await cur.fetchone())[0]
 
         return stats
+
+
+async def create_promocode(code: str, amount: float, max_uses: int):
+    import aiosqlite
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "INSERT INTO promocodes (code, amount, max_uses) VALUES (?, ?, ?)",
+            (code, amount, max_uses)
+        )
+        await db.commit()
+
+async def get_promocode(code: str):
+    import aiosqlite
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT * FROM promocodes WHERE code=?", (code,)) as cur:
+            row = await cur.fetchone()
+            if row:
+                return {
+                    "id": row[0],
+                    "code": row[1],
+                    "amount": row[2],
+                    "uses": row[3],
+                    "max_uses": row[4],
+                    "expires_at": row[5]
+                }
+            return None
+
+async def get_all_promocodes():
+    import aiosqlite
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT * FROM promocodes") as cur:
+            rows = await cur.fetchall()
+            return [{"id": r[0], "code": r[1], "amount": r[2], "uses": r[3], "max_uses": r[4], "expires_at": r[5]} for r in rows]
+
+async def delete_promocode(code: str):
+    import aiosqlite
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM promocodes WHERE code=?", (code,))
+        await db.commit()
+
+async def use_promocode(user_id: int, code: str) -> dict:
+    import aiosqlite
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT id, amount, uses, max_uses FROM promocodes WHERE code=?", (code,)) as cur:
+            row = await cur.fetchone()
+            if not row:
+                return {"success": False, "msg": "❌ Promokod topilmadi."}
+            pid, amount, uses, max_uses = row
+            
+            if uses >= max_uses:
+                return {"success": False, "msg": "❌ Promokod allaqachon ishlatib bo'lingan."}
+                
+            async with db.execute("SELECT 1 FROM promocode_uses WHERE user_id=? AND promocode_id=?", (user_id, pid)) as cur2:
+                if await cur2.fetchone():
+                    return {"success": False, "msg": "❌ Siz bu promokodni oldin ishlatgansiz."}
+                    
+            await db.execute("INSERT INTO promocode_uses (user_id, promocode_id) VALUES (?, ?)", (user_id, pid))
+            await db.execute("UPDATE promocodes SET uses = uses + 1 WHERE id=?", (pid,))
+            await db.execute("UPDATE users SET balance = balance + ? WHERE user_id=?", (amount, user_id))
+            await db.commit()
+            return {"success": True, "amount": amount}

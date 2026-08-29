@@ -54,15 +54,14 @@ def main_menu_keyboard(is_admin: bool = False) -> ReplyKeyboardMarkup:
     keys = [
         ["📱 Raqam sotib olish"],
         ["💳 Hisobni to'ldirish", "💰 Hisobim"],
-        ["📞 Admin bilan bog'lanish"],
+        ["📞 Admin bilan bog'lanish", "🎁 Promokod"],
     ]
     if is_admin:
         keys.append(["👨‍💻 Admin Panel"])
 
     return ReplyKeyboardMarkup(
         keys,
-        resize_keyboard=True,
-        is_persistent=True,
+        resize_keyboard=True
     )
 
 
@@ -70,15 +69,14 @@ def admin_main_keyboard() -> ReplyKeyboardMarkup:
     """Admin asosiy menyusi — pastda doim ko'rinadi"""
     return ReplyKeyboardMarkup(
         [
-            ["📊 Statistika", "👥 Foydalanuvchilar"],
-            ["➖ Balans ➕", "🚫 BAN ✅"],
+            ["📊 Statistika", "⏳ Kutayotgan to'lovlar"],
+            ["🚫 BAN ✅", "➖ Balans ➕"],
             ["📢 Kanallar", "🌍 Davlatlar"],
             ["💳 Karta sozlash", "📨 Ommaviy xabar"],
-            ["👮‍♂️ Adminlar", "⏳ Kutayotgan to'lovlar"],
+            ["🎁 Promokodlar", "👮‍♂️ Adminlar"],
             ["🔙 Bosh menyuga"],
         ],
-        resize_keyboard=True,
-        is_persistent=True,
+        resize_keyboard=True
     )
 
 
@@ -132,6 +130,9 @@ def paginated_keyboard(
         nav.append(InlineKeyboardButton("Keyingi ➡️", callback_data=f"page_{prefix}_{page + 1}"))
     if nav:
         buttons.append(nav)
+        
+    if back_callback:
+        buttons.append([InlineKeyboardButton("🔙 Orqaga", callback_data=back_callback)])
 
     return InlineKeyboardMarkup(buttons)
 

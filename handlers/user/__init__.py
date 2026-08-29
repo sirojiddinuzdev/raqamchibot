@@ -11,11 +11,13 @@ from .user_purchase import (
     select_country_callback,
     cancel_buy_callback,
     confirm_buy_callback,
-    get_code_callback
+    get_code_callback,
+    top_10_countries_callback
 )
 from .user_deposit import (
     deposit_handler,
-    deposit_check_handler
+    deposit_check_handler,
+    cancel_deposit_callback
 )
 
 __all__ = [
@@ -32,4 +34,6 @@ __all__ = [
     "get_code_callback",
     "deposit_handler",
     "deposit_check_handler",
+    "cancel_deposit_callback",
+    "top_10_countries_callback",
 ]

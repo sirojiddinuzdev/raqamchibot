@@ -51,13 +51,21 @@ async def buy_number_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         )
         return
 
-    page = context.user_data.get("country_page", 0)
     items = []
     for code, price in admin_countries.items():
         name = get_country_name(code)
         items.append((f"select_country_{code}", f"{name} | {int(price):,} so'm"))
 
-    kbd = paginated_keyboard(items, page, per_page=10, prefix="country")
+    items.sort(key=lambda x: x[1])  # sort by name
+
+    kbd = paginated_keyboard(items, 0, per_page=15, prefix="country", back_callback=None)
+    
+    # Add Top 10 button
+    inline_keyboard = list(kbd.inline_keyboard)
+    inline_keyboard.insert(0, [InlineKeyboardButton("🔥 Top 10 eng arzon davlatlar", callback_data="top_10_countries")])
+    kbd = InlineKeyboardMarkup(inline_keyboard)
+
+    context.user_data["country_page"] = 0
     await update.message.reply_text(
         "🌍 <b>Davlat tanlang</b>\n\nQuyidagi davlatlardan birini tanlang:",
         parse_mode="HTML",
@@ -90,8 +98,58 @@ async def country_page_callback(update: Update, context: ContextTypes.DEFAULT_TY
         name = get_country_name(code)
         items.append((f"select_country_{code}", f"{name} | {int(price):,} so'm"))
 
-    kbd = paginated_keyboard(items, page, per_page=10, prefix="country")
+    items.sort(key=lambda x: x[1])
+
+    kbd = paginated_keyboard(items, page, per_page=15, prefix="country", back_callback=None)
+    
+    # Add Top 10 button
+    inline_keyboard = list(kbd.inline_keyboard)
+    inline_keyboard.insert(0, [InlineKeyboardButton("🔥 Top 10 eng arzon davlatlar", callback_data="top_10_countries")])
+    kbd = InlineKeyboardMarkup(inline_keyboard)
+    
     await query.message.edit_reply_markup(reply_markup=kbd)
+
+
+async def top_10_countries_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    api_countries = context.user_data.get("api_countries", {})
+    if not api_countries:
+        await query.message.edit_text("❌ API xatosi, keyinroq urinib ko'ring.")
+        return
+
+    # Narxlari bo'yicha saralash
+    sorted_api = sorted(api_countries.items(), key=lambda x: float(x[1]))
+    top_10 = sorted_api[:10]
+
+    items = []
+    for code, _ in top_10:
+        name = get_country_name(code)
+        price_uzs = "Noma'lum"
+        
+        async with aiosqlite.connect(DB_PATH) as dbase:
+            async with dbase.execute("SELECT value FROM settings WHERE key=?", (f"country_{code}",)) as cur:
+                row = await cur.fetchone()
+                if row:
+                    price_uzs = f"{int(row[0]):,} so'm"
+                else:
+                    # Agar botda hali sotuv narxi belgilanmagan bo'lsa
+                    price_uzs = f"Asl: {int(float(api_countries[code]) * 12500):,} so'm"
+                    
+        items.append((f"select_country_{code}", f"{name} ({price_uzs})"))
+
+    kbd_buttons = []
+    for cb_data, btn_text in items:
+        kbd_buttons.append([InlineKeyboardButton(btn_text, callback_data=cb_data)])
+        
+    kbd_buttons.append([InlineKeyboardButton("🔙 Orqaga", callback_data="page_country_0")])
+    
+    await query.message.edit_text(
+        "🔥 <b>Eng arzon 10 ta davlat:</b>",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(kbd_buttons)
+    )
 
 
 async def select_country_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -236,7 +294,8 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     context.user_data.pop("pending_price", None)
     context.user_data.pop("pending_country_name", None)
 
-    new_balance = balance - price
+    u_record = await db.get_user(user_id)
+    new_balance = u_record["balance"] if u_record else 0
 
     kbd = InlineKeyboardMarkup([[
         InlineKeyboardButton("📨 SMS Kodni olish", callback_data=f"get_code_{purchase_id}")

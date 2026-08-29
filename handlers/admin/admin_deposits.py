@@ -61,6 +61,6 @@ async def adm_reject_dep_callback(update: Update, context: ContextTypes.DEFAULT_
     context.user_data["target_dep_id"] = dep_id
 
     await query.message.reply_text(
-        f"❌ To'lovni rad etish sababini yozing:\n(Agar izohsiz qoldirmoqchi bo'lsangiz 'Izohsiz' deb yozing)",
+        "❌ To'lovni rad etish sababini yozing:\n(Agar izohsiz qoldirmoqchi bo'lsangiz 'Izohsiz' deb yozing)",
         reply_markup=cancel_keyboard()
     )
