@@ -2,12 +2,16 @@
 Ma'lumotlar bazasi — SQLite (aiosqlite)
 Jadvallar: users, transactions, purchases, channels, settings
 """
+import os
 import aiosqlite
 import logging
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
-DB_PATH = "raqamchi.db"
+
+# Railway volume ulanganda RAILWAY_VOLUME_MOUNT_PATH avtomatik beriladi (masalan /data)
+_VOLUME_DIR = os.getenv("RAILWAY_VOLUME_MOUNT_PATH", ".")
+DB_PATH = os.path.join(_VOLUME_DIR, "raqamchi.db")
 
 
 async def init_db():
