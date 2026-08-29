@@ -114,30 +114,35 @@ async def top_10_countries_callback(update: Update, context: ContextTypes.DEFAUL
     query = update.callback_query
     await query.answer()
 
-    api_countries = context.user_data.get("api_countries", {})
-    if not api_countries:
-        await query.message.edit_text("❌ API xatosi, keyinroq urinib ko'ring.")
+    async with aiosqlite.connect(DB_PATH) as dbase:
+        async with dbase.execute(
+            "SELECT key, value FROM settings WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"
+        ) as cur:
+            rows = await cur.fetchall()
+
+    admin_countries = []
+    for key, val in rows:
+        code = key.replace("country_", "")
+        try:
+            admin_countries.append((code, float(val)))
+        except Exception:
+            pass
+
+    # Sotuv narxlari bo'yicha o'sish tartibida saralash
+    admin_countries.sort(key=lambda x: x[1])
+    top_10 = admin_countries[:10]
+
+    if not top_10:
+        await query.message.edit_text(
+            "❌ Hozircha sotuvda davlatlar yo'q.",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Orqaga", callback_data="page_country_0")]])
+        )
         return
 
-    # Narxlari bo'yicha saralash
-    sorted_api = sorted(api_countries.items(), key=lambda x: float(x[1]))
-    top_10 = sorted_api[:10]
-
     items = []
-    for code, _ in top_10:
+    for code, price in top_10:
         name = get_country_name(code)
-        price_uzs = "Noma'lum"
-        
-        async with aiosqlite.connect(DB_PATH) as dbase:
-            async with dbase.execute("SELECT value FROM settings WHERE key=?", (f"country_{code}",)) as cur:
-                row = await cur.fetchone()
-                if row:
-                    price_uzs = f"{int(row[0]):,} so'm"
-                else:
-                    # Agar botda hali sotuv narxi belgilanmagan bo'lsa
-                    price_uzs = f"Asl: {int(float(api_countries[code]) * 12500):,} so'm"
-                    
-        items.append((f"select_country_{code}", f"{name} ({price_uzs})"))
+        items.append((f"select_country_{code}", f"{name} ({int(price):,} so'm)"))
 
     kbd_buttons = []
     for cb_data, btn_text in items:
@@ -146,7 +151,7 @@ async def top_10_countries_callback(update: Update, context: ContextTypes.DEFAUL
     kbd_buttons.append([InlineKeyboardButton("🔙 Orqaga", callback_data="page_country_0")])
     
     await query.message.edit_text(
-        "🔥 <b>Eng arzon 10 ta davlat:</b>",
+        "🔥 <b>Botdagi eng arzon 10 ta davlat:</b>",
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(kbd_buttons)
     )
