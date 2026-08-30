@@ -87,6 +87,14 @@ async def init_db():
             )
         ''')
 
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS join_requests (
+                user_id INTEGER,
+                chat_id TEXT,
+                UNIQUE(user_id, chat_id)
+            )
+        ''')
+
         await db.execute("""
             CREATE TABLE IF NOT EXISTS settings (
                 key   TEXT PRIMARY KEY,
@@ -194,6 +202,23 @@ async def get_users_count() -> int:
         async with db.execute("SELECT COUNT(*) FROM users") as cur:
             row = await cur.fetchone()
             return row[0] if row else 0
+
+async def get_settings() -> dict:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT key, value FROM settings") as cur:
+            rows = await cur.fetchall()
+            return {k: v for k, v in rows}
+
+async def add_join_request(user_id: int, chat_id: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("INSERT OR IGNORE INTO join_requests (user_id, chat_id) VALUES (?, ?)", (user_id, str(chat_id)))
+        await db.commit()
+
+async def has_join_request(user_id: int, chat_id: str) -> bool:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute("SELECT 1 FROM join_requests WHERE user_id=? AND chat_id=?", (user_id, str(chat_id))) as cur:
+            res = await cur.fetchone()
+            return res is not None
 
 
 # ─── XARID ────────────────────────────────────────────────────

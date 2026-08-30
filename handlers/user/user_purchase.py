@@ -58,12 +58,7 @@ async def buy_number_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     items.sort(key=lambda x: x[1])  # sort by name
 
-    kbd = paginated_keyboard(items, 0, per_page=15, prefix="country", back_callback=None)
-    
-    # Add Top 10 button
-    inline_keyboard = list(kbd.inline_keyboard)
-    inline_keyboard.insert(0, [InlineKeyboardButton("🔥 Top 10 eng arzon davlatlar", callback_data="top_10_countries")])
-    kbd = InlineKeyboardMarkup(inline_keyboard)
+    kbd = paginated_keyboard(items, 0, per_page=14, prefix="country", back_callback=None)
 
     context.user_data["country_page"] = 0
     await update.message.reply_text(
@@ -100,61 +95,12 @@ async def country_page_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
     items.sort(key=lambda x: x[1])
 
-    kbd = paginated_keyboard(items, page, per_page=15, prefix="country", back_callback=None)
-    
-    # Add Top 10 button
-    inline_keyboard = list(kbd.inline_keyboard)
-    inline_keyboard.insert(0, [InlineKeyboardButton("🔥 Top 10 eng arzon davlatlar", callback_data="top_10_countries")])
-    kbd = InlineKeyboardMarkup(inline_keyboard)
+    kbd = paginated_keyboard(items, page, per_page=14, prefix="country", back_callback=None)
     
     await query.message.edit_reply_markup(reply_markup=kbd)
 
 
-async def top_10_countries_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
 
-    async with aiosqlite.connect(DB_PATH) as dbase:
-        async with dbase.execute(
-            "SELECT key, value FROM settings WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"
-        ) as cur:
-            rows = await cur.fetchall()
-
-    admin_countries = []
-    for key, val in rows:
-        code = key.replace("country_", "")
-        try:
-            admin_countries.append((code, float(val)))
-        except Exception:
-            pass
-
-    # Sotuv narxlari bo'yicha o'sish tartibida saralash
-    admin_countries.sort(key=lambda x: x[1])
-    top_10 = admin_countries[:10]
-
-    if not top_10:
-        await query.message.edit_text(
-            "❌ Hozircha sotuvda davlatlar yo'q.",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Orqaga", callback_data="page_country_0")]])
-        )
-        return
-
-    items = []
-    for code, price in top_10:
-        name = get_country_name(code)
-        items.append((f"select_country_{code}", f"{name} ({int(price):,} so'm)"))
-
-    kbd_buttons = []
-    for cb_data, btn_text in items:
-        kbd_buttons.append([InlineKeyboardButton(btn_text, callback_data=cb_data)])
-        
-    kbd_buttons.append([InlineKeyboardButton("🔙 Orqaga", callback_data="page_country_0")])
-    
-    await query.message.edit_text(
-        "🔥 <b>Botdagi eng arzon 10 ta davlat:</b>",
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(kbd_buttons)
-    )
 
 
 async def select_country_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):

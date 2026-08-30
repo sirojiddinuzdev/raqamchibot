@@ -10,6 +10,7 @@ from telegram.ext import (
     CommandHandler,
     CallbackQueryHandler,
     MessageHandler,
+    ChatJoinRequestHandler,
     filters,
     ContextTypes,
 )
@@ -29,7 +30,6 @@ from handlers.user import (
     cancel_buy_callback,
     confirm_buy_callback,
     get_code_callback,
-    top_10_countries_callback,
     cancel_deposit_callback,
 )
 from handlers.user.user_promocode import user_promo_handler
@@ -226,6 +226,9 @@ def main():
     app.add_handler(MessageHandler(filters.Regex("^(👨‍💻 Admin Panel|🔙 Orqaga)$"), admin_command))
 
     # ── Reply Keyboard matnlari (Foydalanuvchi) ──
+    from handlers.user.user_core import chat_join_request_handler
+    app.add_handler(ChatJoinRequestHandler(chat_join_request_handler))
+
     app.add_handler(MessageHandler(filters.Regex("^📱 Raqam sotib olish$"), buy_number_handler))
     app.add_handler(MessageHandler(filters.Regex("^💳 Hisobni to'ldirish$"), deposit_handler))
     app.add_handler(MessageHandler(filters.Regex("^💰 Hisobim$"), my_balance_handler))
@@ -258,7 +261,6 @@ def main():
     app.add_handler(CallbackQueryHandler(confirm_buy_callback, pattern=r"^confirm_buy_"))
     app.add_handler(CallbackQueryHandler(get_code_callback, pattern=r"^get_code_"))
     app.add_handler(CallbackQueryHandler(cancel_deposit_callback, pattern="^cancel_deposit$"))
-    app.add_handler(CallbackQueryHandler(top_10_countries_callback, pattern="^top_10_countries$"))
     app.add_handler(CallbackQueryHandler(adm_users_page_callback, pattern=r"^adm_users_page_\d+$"))
 
     app.add_handler(CallbackQueryHandler(adm_add_balance_handler, pattern=r"^adm_add_bal_\d+$"))

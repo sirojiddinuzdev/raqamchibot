@@ -12,6 +12,15 @@ from handlers.admin.admin_core import is_admin
 
 logger = logging.getLogger(__name__)
 
+async def chat_join_request_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Foydalanuvchi majburiy kanalga/guruhga qo'shilish so'rovi yuborganda"""
+    user_id = update.chat_join_request.from_user.id
+    chat_id = update.chat_join_request.chat.id
+    
+    await db.add_join_request(user_id, chat_id)
+    # Qo'shimcha ravishda avtomat tasdiqlashni xohlasa:
+    # await context.bot.approve_chat_join_request(chat_id=chat_id, user_id=user_id)
+
 
 async def ensure_subscribed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
     """False qaytarsa — obuna bo'lmagan"""
@@ -85,13 +94,20 @@ async def check_subscription_callback(update: Update, context: ContextTypes.DEFA
     not_subs = await check_user_subscribed(context.bot, user_id, channels)
 
     if not_subs:
+        await query.answer("Siz hali obuna bo'lmagansiz", show_alert=True)
         kbd = build_subscribe_keyboard(not_subs, "check_sub")
-        await query.message.edit_text(
-            "❌ Siz hali barcha kanallarga obuna bo'lmadingiz!\n\n"
-            + "\n".join(f"• {ch['channel_name']}" for ch in not_subs),
-            parse_mode="HTML",
-            reply_markup=kbd
-        )
+        
+        # Edit text only if it has changed to avoid MessageNotModified error
+        new_text = "❌ Siz hali barcha kanallarga obuna bo'lmadingiz yoki so'rov yubormadingiz!\n\n" + "\n".join(f"• {ch['channel_name']}" for ch in not_subs)
+        if query.message.text != new_text:
+            try:
+                await query.message.edit_text(
+                    new_text,
+                    parse_mode="HTML",
+                    reply_markup=kbd
+                )
+            except Exception:
+                pass
     else:
         user_data = await db.get_user(user_id)
         balance = user_data["balance"] if user_data else 0.0

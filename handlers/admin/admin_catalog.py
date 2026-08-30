@@ -80,6 +80,8 @@ async def adm_add_country_list_callback(update: Update, context: ContextTypes.DE
         price_uzs = int(float(price) * EXCHANGE_RATE)
         items.append((f"adm_pick_country_{code}", f"{name} ({price_uzs:,} so'm)"))
 
+    items.sort(key=lambda x: x[1])
+
     kbd = paginated_keyboard(items, 0, per_page=15, prefix="adm_clist", back_callback="adm_back_to_catalog")
     await query.message.edit_text(
         "🌍 <b>Qo'shish uchun davlatni tanlang:</b>",
@@ -100,6 +102,8 @@ async def adm_clist_page_callback(update: Update, context: ContextTypes.DEFAULT_
         name = get_country_name(code)
         price_uzs = int(float(price) * EXCHANGE_RATE)
         items.append((f"adm_pick_country_{code}", f"{name} ({price_uzs:,} so'm)"))
+
+    items.sort(key=lambda x: x[1])
 
     kbd = paginated_keyboard(items, page, per_page=15, prefix="adm_clist", back_callback="adm_back_to_catalog")
     await query.message.edit_reply_markup(reply_markup=kbd)

@@ -11,6 +11,7 @@ from telegram import (
 )
 from telegram.error import TelegramError
 import logging
+import database as db
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +25,12 @@ async def check_user_subscribed(bot: Bot, user_id: int, channels: list[dict]) ->
         try:
             member = await bot.get_chat_member(chat_id=ch["channel_id"], user_id=user_id)
             if member.status in ("left", "kicked"):
-                not_subscribed.append(ch)
+                if not await db.has_join_request(user_id, ch["channel_id"]):
+                    not_subscribed.append(ch)
         except TelegramError as e:
-            logger.warning(f"Kanal tekshirishda xatolik {ch['channel_id']}: {e}")
-            not_subscribed.append(ch)
+            if not await db.has_join_request(user_id, ch["channel_id"]):
+                logger.warning(f"Kanal tekshirishda xatolik {ch['channel_id']}: {e}")
+                not_subscribed.append(ch)
     return not_subscribed
 
 
