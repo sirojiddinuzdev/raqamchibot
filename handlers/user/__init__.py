@@ -11,8 +11,7 @@ from .user_purchase import (
     select_country_callback,
     cancel_buy_callback,
     confirm_buy_callback,
-    get_code_callback,
-    top_10_countries_callback
+    get_code_callback
 )
 from .user_deposit import (
     deposit_handler,
@@ -35,5 +34,4 @@ __all__ = [
     "deposit_handler",
     "deposit_check_handler",
     "cancel_deposit_callback",
-    "top_10_countries_callback",
 ]
