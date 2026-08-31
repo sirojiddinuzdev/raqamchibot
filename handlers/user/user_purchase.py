@@ -1,6 +1,7 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 import aiosqlite
+import html
 
 import database as db
 from database import DB_PATH
@@ -232,7 +233,7 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         try:
             log_text = (
                 f"🛒 <b>Yangi xarid!</b>\n\n"
-                f"👤 Xaridor: <a href='tg://user?id={user_id}'>{query.from_user.first_name}</a> (<code>{user_id}</code>)\n"
+                f"👤 Xaridor: <a href='tg://user?id={user_id}'>{html.escape(query.from_user.first_name)}</a> (<code>{user_id}</code>)\n"
                 f"🌍 Davlat: {country_name}\n"
                 f"📱 Raqam: <code>{number[:-4]}****</code>\n"
                 f"💵 Narxi: {int(price):,} so'm"

@@ -1,5 +1,6 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
+import html
 
 import database as db
 from helpers import cancel_keyboard
@@ -29,7 +30,7 @@ async def _send_users_page(update: Update, context: ContextTypes.DEFAULT_TYPE, p
     text = f"👥 <b>Foydalanuvchilar (Jami: {total}):</b>\nSahifa: {page+1}\n\n"
     for u in users:
         status = "🚫" if u["is_banned"] else "✅"
-        text += f"{status} <code>{u['user_id']}</code> — {u['full_name']} — {int(u['balance']):,} so'm\n"
+        text += f"{status} <code>{u['user_id']}</code> — {html.escape(u['full_name'])} — {int(u['balance']):,} so'm\n"
         
     text += "\nBiror foydalanuvchi ID sini pastga kiriting (balans, ban boshqaruvi uchun):"
 

@@ -1,6 +1,7 @@
 import asyncio
 from telegram import Update
 from telegram.ext import ContextTypes
+import html
 
 import database as db
 from config import ADMIN_IDS
@@ -57,7 +58,7 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 msg = (
                     f"👤 <b>Foydalanuvchi ma'lumotlari:</b>\n\n"
                     f"ID: <code>{u['user_id']}</code>\n"
-                    f"Ism: {u['full_name']}\n"
+                    f"Ism: {html.escape(u['full_name'])}\n"
                     f"Username: @{u['username']}\n"
                     f"Balans: {int(u['balance']):,} so'm\n"
                     f"Status: {status}\n"

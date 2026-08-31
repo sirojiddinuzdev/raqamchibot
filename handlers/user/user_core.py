@@ -1,4 +1,5 @@
 import logging
+import html
 from telegram import Update
 from telegram.ext import ContextTypes
 
@@ -69,8 +70,9 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     balance = user_data["balance"] if user_data else 0.0
+    safe_name = html.escape(user.first_name)
     text = (
-        f"👋 <b>Xush kelibsiz, {user.first_name}!</b>\n\n"
+        f"👋 <b>Xush kelibsiz, {safe_name}!</b>\n\n"
         f"🤖 <b>Raqamchi Bot</b> — Telegram akkount raqamlari sotib olish xizmati\n\n"
         f"💰 <b>Hisobingiz:</b> {int(balance):,} so'm\n"
         f"🆔 <b>ID:</b> <code>{user_id}</code>\n\n"
@@ -109,9 +111,10 @@ async def check_subscription_callback(update: Update, context: ContextTypes.DEFA
         user_data = await db.get_user(user_id)
         balance = user_data["balance"] if user_data else 0.0
         await query.message.delete()
+        safe_name = html.escape(query.from_user.first_name)
         await query.message.chat.send_message(
             f"✅ <b>Obuna tasdiqlandi!</b>\n\n"
-            f"👋 Xush kelibsiz, <b>{query.from_user.first_name}</b>!\n\n"
+            f"👋 Xush kelibsiz, <b>{safe_name}</b>!\n\n"
             f"💰 <b>Hisobingiz:</b> {int(balance):,} so'm\n"
             f"🆔 <b>ID:</b> <code>{user_id}</code>",
             parse_mode="HTML",
@@ -165,10 +168,11 @@ async def my_balance_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 f"<code>{p['number']}</code> — {int(p['price']):,} so'm\n"
             )
 
+    safe_fullname = html.escape(user_data['full_name'])
     text = (
-        f"💰 <b>Hisobim</b>\n\n"
+        f"💰 <b>Hisob ma'lumotlari</b>\n\n"
+        f"👤 Ism: {safe_fullname}\n"
         f"🆔 ID: <code>{user_id}</code>\n"
-        f"👤 Ism: {user_data['full_name']}\n"
         f"💵 Balans: <b>{int(user_data['balance']):,} so'm</b>\n"
         f"📅 Qo'shilgan: {user_data['joined_at'][:10]}"
         + purchase_text

@@ -1,5 +1,6 @@
 from telegram import Update, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import ContextTypes
+import html
 
 import database as db
 from helpers import cancel_keyboard
@@ -143,7 +144,7 @@ async def deposit_check_handler(update: Update, context: ContextTypes.DEFAULT_TY
             ])
             caption_text = (
                 f"📥 <b>Yangi to'lov cheki!</b>\n\n"
-                f"👤 Foydalanuvchi: <a href='tg://user?id={user.id}'>{user.full_name}</a>\n"
+                f"👤 Foydalanuvchi: <a href='tg://user?id={user.id}'>{html.escape(user.full_name)}</a>\n"
                 f"🆔 ID: <code>{user.id}</code>\n"
                 f"Username: @{user.username if user.username else 'yoq'}\n"
                 f"So'ralgan summa: <b>{amount:,} so'm</b>\n\n"
