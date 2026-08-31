@@ -16,10 +16,7 @@ async def chat_join_request_handler(update: Update, context: ContextTypes.DEFAUL
     """Foydalanuvchi majburiy kanalga/guruhga qo'shilish so'rovi yuborganda"""
     user_id = update.chat_join_request.from_user.id
     chat_id = update.chat_join_request.chat.id
-    
     await db.add_join_request(user_id, chat_id)
-    # Qo'shimcha ravishda avtomat tasdiqlashni xohlasa:
-    # await context.bot.approve_chat_join_request(chat_id=chat_id, user_id=user_id)
 
 
 async def ensure_subscribed(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:

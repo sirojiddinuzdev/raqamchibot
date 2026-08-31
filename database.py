@@ -215,10 +215,21 @@ async def add_join_request(user_id: int, chat_id: str):
         await db.commit()
 
 async def has_join_request(user_id: int, chat_id: str) -> bool:
+    chat_str = str(chat_id)
+    variations = [chat_str]
+    if not chat_str.startswith("-100"):
+        if chat_str.startswith("-"):
+            variations.append(f"-100{chat_str[1:]}")
+        else:
+            variations.append(f"-100{chat_str}")
+            
     async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute("SELECT 1 FROM join_requests WHERE user_id=? AND chat_id=?", (user_id, str(chat_id))) as cur:
-            res = await cur.fetchone()
-            return res is not None
+        for cid in variations:
+            async with db.execute("SELECT 1 FROM join_requests WHERE user_id=? AND chat_id=?", (user_id, str(cid))) as cur:
+                res = await cur.fetchone()
+                if res is not None:
+                    return True
+        return False
 
 
 # ─── XARID ────────────────────────────────────────────────────

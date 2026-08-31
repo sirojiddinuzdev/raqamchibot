@@ -258,7 +258,7 @@ def main():
     app.add_handler(CallbackQueryHandler(country_page_callback, pattern=r"^page_country_\d+$"))
     app.add_handler(CallbackQueryHandler(select_country_callback, pattern=r"^select_country_"))
     app.add_handler(CallbackQueryHandler(cancel_buy_callback, pattern="^cancel_buy$"))
-    app.add_handler(CallbackQueryHandler(confirm_buy_callback, pattern=r"^confirm_buy_"))
+    app.add_handler(CallbackQueryHandler(confirm_buy_callback, pattern="^confirm_buy$"))
     app.add_handler(CallbackQueryHandler(get_code_callback, pattern=r"^get_code_"))
     app.add_handler(CallbackQueryHandler(cancel_deposit_callback, pattern="^cancel_deposit$"))
     app.add_handler(CallbackQueryHandler(adm_users_page_callback, pattern=r"^adm_users_page_\d+$"))
