@@ -41,9 +41,16 @@ async def init_db():
                 code       TEXT,
                 password   TEXT,
                 status     TEXT    DEFAULT 'pending',
-                bought_at  TEXT    DEFAULT CURRENT_TIMESTAMP
+                bought_at  TEXT    DEFAULT CURRENT_TIMESTAMP,
+                original_price REAL DEFAULT 0.0
             )
         """)
+
+        # Migration for existing databases
+        try:
+            await db.execute("ALTER TABLE purchases ADD COLUMN original_price REAL DEFAULT 0.0")
+        except Exception:
+            pass
 
         await db.execute("""
             CREATE TABLE IF NOT EXISTS deposits (

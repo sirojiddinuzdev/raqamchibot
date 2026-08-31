@@ -175,9 +175,9 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     user_id = query.from_user.id
     user_data = await db.get_user(user_id)
 
-    country_code = context.user_data.get("pending_country")
-    price = context.user_data.get("pending_price")
-    country_name = context.user_data.get("pending_country_name")
+    country_code = context.user_data.pop("pending_country", None)
+    price = context.user_data.pop("pending_price", None)
+    country_name = context.user_data.pop("pending_country_name", None)
 
     if not country_code or not price:
         await query.message.edit_text("❌ Xatolik. Qaytadan urinib ko'ring.")
@@ -241,9 +241,6 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         except Exception:
             pass
 
-    context.user_data.pop("pending_country", None)
-    context.user_data.pop("pending_price", None)
-    context.user_data.pop("pending_country_name", None)
 
     u_record = await db.get_user(user_id)
     new_balance = u_record["balance"] if u_record else 0
