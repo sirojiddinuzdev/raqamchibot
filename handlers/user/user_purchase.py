@@ -256,6 +256,8 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         f"📱 Raqam: <code>{number}</code>\n"
         f"💵 Narxi: {int(price):,} so'm\n"
         f"💰 Qolgan balans: {int(new_balance):,} so'm\n\n"
+        f"⚠️ <b>DIQQAT:</b> Raqamni rasmiy Telegram ilovasida UMUMAN ishlatmang! Aks holda darhol bloklanadi.\n"
+        f"👉 Faqat norasmiy ilovalardan (Telegram X, Plus Messenger, Nicegram va h.k.) foydalaning.\n\n"
         f"📨 SMS kodni olish uchun tugmani bosing.",
         parse_mode="HTML",
         reply_markup=kbd
@@ -315,6 +317,7 @@ async def get_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"💵 Narxi: {int(purchase['price']):,} so'm\n"
         f"💬 <b>Kod: <code>{code}</code></b>\n"
         f"🔑 Parol: <code>{password or 'Mavjud emas'}</code>\n\n"
-        f"✅ Telegram ilovasida ushbu raqamni faollashtiring!",
+        f"⚠️ <b>DIQQAT:</b> Raqamni rasmiy Telegram ilovasida UMUMAN faollashtirmang (bloklanadi)!\n"
+        f"👉 Faqat norasmiy ilovalardan (Telegram X, Plus Messenger, Nicegram) foydalaning.",
         parse_mode="HTML"
     )
