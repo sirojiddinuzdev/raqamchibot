@@ -98,8 +98,10 @@ async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def universal_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Matn handlerlarini to'g'ri yo'naltirish"""
+    if not update.effective_user:
+        return
+    
     user_id = update.effective_user.id
-
     from handlers.admin.admin_core import is_admin
     # Admin action lari uchun
     if await is_admin(user_id):
