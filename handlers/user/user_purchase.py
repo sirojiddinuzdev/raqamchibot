@@ -101,7 +101,51 @@ async def country_page_callback(update: Update, context: ContextTypes.DEFAULT_TY
     await query.message.edit_reply_markup(reply_markup=kbd)
 
 
+async def top_10_countries_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    user_data = await db.get_user(user_id)
+    if user_data and user_data["is_banned"]:
+        return
 
+    async with aiosqlite.connect(DB_PATH) as dbase:
+        async with dbase.execute(
+            "SELECT key, value FROM settings WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"
+        ) as cur:
+            rows = await cur.fetchall()
+
+    admin_countries = []
+    for key, val in rows:
+        code = key.replace("country_", "")
+        try:
+            admin_countries.append((code, float(val)))
+        except Exception:
+            pass
+
+    items = []
+    for code, price in admin_countries:
+        name = get_country_name(code)
+        items.append((f"select_country_{code}", f"{name} | {int(price):,} so'm", price))
+
+    items.sort(key=lambda x: x[2])  # sort by price ascending
+    top_10 = items[:10]
+
+    buttons = []
+    row = []
+    for cb, label, price in top_10:
+        row.append(InlineKeyboardButton(label, callback_data=cb))
+        if len(row) == 2:
+            buttons.append(row)
+            row = []
+    if row:
+        buttons.append(row)
+
+    buttons.append([InlineKeyboardButton("🔙 Barcha davlatlar", callback_data="page_country_0")])
+
+    await update.message.reply_text(
+        "🔝 <b>Eng arzon 10 ta davlat</b>\n\nQuyidagilardan birini tanlang:",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(buttons)
+    )
 
 
 async def select_country_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):

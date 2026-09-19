@@ -56,6 +56,7 @@ def main_menu_keyboard(is_admin: bool = False) -> ReplyKeyboardMarkup:
     """Foydalanuvchi asosiy menyusi — pastda doim ko'rinadi"""
     keys = [
         ["📱 Raqam sotib olish"],
+        ["🔝 Top 10 arzon raqamlar"],
         ["💳 Hisobni to'ldirish", "💰 Hisobim"],
         ["📞 Admin bilan bog'lanish", "🎁 Promokod"],
     ]
@@ -107,6 +108,7 @@ def paginated_keyboard(
     per_page: int = 10,
     prefix: str = "country",
     back_callback: str = "back_main_inline",
+    top_button: list = None,
 ) -> InlineKeyboardMarkup:
     """
     Sahifalangan inline tugmalar.
@@ -117,6 +119,9 @@ def paginated_keyboard(
     page_items = items[start:end]
 
     buttons = []
+    if top_button:
+        buttons.append(top_button)
+    
     row = []
     for i, (cb, label) in enumerate(page_items):
         row.append(InlineKeyboardButton(label, callback_data=cb))

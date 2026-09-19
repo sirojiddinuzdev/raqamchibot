@@ -27,6 +27,7 @@ from handlers.user import (
     buy_number_handler,
     country_page_callback,
     select_country_callback,
+    top_10_countries_handler,
     cancel_buy_callback,
     confirm_buy_callback,
     get_code_callback,
@@ -232,6 +233,7 @@ def main():
     app.add_handler(ChatJoinRequestHandler(chat_join_request_handler))
 
     app.add_handler(MessageHandler(filters.Regex("^📱 Raqam sotib olish$"), buy_number_handler))
+    app.add_handler(MessageHandler(filters.Regex("^🔝 Top 10 arzon raqamlar$"), top_10_countries_handler))
     app.add_handler(MessageHandler(filters.Regex("^💳 Hisobni to'ldirish$"), deposit_handler))
     app.add_handler(MessageHandler(filters.Regex("^💰 Hisobim$"), my_balance_handler))
     app.add_handler(MessageHandler(filters.Regex("^📞 Admin bilan bog'lanish$"), contact_admin_handler))

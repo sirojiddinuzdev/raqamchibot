@@ -9,6 +9,7 @@ from .user_purchase import (
     buy_number_handler,
     country_page_callback,
     select_country_callback,
+    top_10_countries_handler,
     cancel_buy_callback,
     confirm_buy_callback,
     get_code_callback
