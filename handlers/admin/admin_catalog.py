@@ -169,6 +169,10 @@ async def adm_edit_country_list_callback(update: Update, context: ContextTypes.D
     query = update.callback_query
     await query.answer()
 
+    page = 0
+    if query.data.startswith("page_adm_edit_"):
+        page = int(query.data.split("_")[-1])
+
     async with aiosqlite.connect(DB_PATH) as dbase:
         async with dbase.execute("SELECT key FROM settings WHERE key LIKE 'country_%'") as cur:
             rows = await cur.fetchall()
@@ -190,22 +194,23 @@ async def adm_edit_country_list_callback(update: Update, context: ContextTypes.D
         name = get_country_name(code)
         items.append((f"adm_pick_country_{code}", name))
 
-    kbd_buttons = []
-    for cb_data, btn_text in items:
-        kbd_buttons.append([InlineKeyboardButton(btn_text, callback_data=cb_data)])
-        
-    kbd_buttons.append([InlineKeyboardButton("🔙 Orqaga", callback_data="adm_back_to_catalog")])
+    from helpers import paginated_keyboard
+    kbd = paginated_keyboard(items, page, per_page=14, prefix="adm_edit", back_callback="adm_back_to_catalog")
 
     await query.message.edit_text(
         "✏️ <b>Narxini tahrirlash uchun davlatni tanlang:</b>",
         parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(kbd_buttons)
+        reply_markup=kbd
     )
 
 
 async def adm_remove_country_list_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+
+    page = 0
+    if query.data.startswith("page_adm_del_"):
+        page = int(query.data.split("_")[-1])
 
     async with aiosqlite.connect(DB_PATH) as dbase:
         async with dbase.execute("SELECT key FROM settings WHERE key LIKE 'country_%'") as cur:
@@ -224,17 +229,13 @@ async def adm_remove_country_list_callback(update: Update, context: ContextTypes
         name = get_country_name(code)
         items.append((f"adm_del_country_{code}", name))
 
-    # O'chirish uchun hamma davlatlar bitta sahifada qila qolamiz (odatda 10-20 ta bo'ladi)
-    kbd_buttons = []
-    for cb_data, btn_text in items:
-        kbd_buttons.append([InlineKeyboardButton(btn_text, callback_data=cb_data)])
-        
-    kbd_buttons.append([InlineKeyboardButton("🔙 Orqaga", callback_data="adm_back_to_catalog")])
+    from helpers import paginated_keyboard
+    kbd = paginated_keyboard(items, page, per_page=14, prefix="adm_del", back_callback="adm_back_to_catalog")
 
     await query.message.edit_text(
         "❌ <b>O'chirish uchun davlatni tanlang:</b>",
         parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(kbd_buttons)
+        reply_markup=kbd
     )
 
 
