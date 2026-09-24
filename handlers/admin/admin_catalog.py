@@ -28,9 +28,13 @@ async def adm_countries_handler(update: Update, context: ContextTypes.DEFAULT_TY
 
     api_countries = await spider.get_countries()
 
-    text = "🌍 <b>Sotuvdagi davlatlar ro'yxati (Botda):</b>\n\n"
+    MAX_LEN = 3800
+    chunks = []
+    current_chunk = "🌍 <b>Sotuvdagi davlatlar ro'yxati (Botda):</b>\n\n"
+    
     if not rows:
-        text += "Hozircha davlatlar qo'shilmagan."
+        current_chunk += "Hozircha davlatlar qo'shilmagan."
+        chunks.append(current_chunk)
     else:
         for k, v in rows:
             c_code = k.replace("country_", "")
@@ -41,7 +45,15 @@ async def adm_countries_handler(update: Update, context: ContextTypes.DEFAULT_TY
             else:
                 api_price_uzs = "Noma'lum"
             sale_price = f"{int(float(v)):,.0f} so'm" if v else "0 so'm"
-            text += f"• {c_name} ({c_code}): Asl: <b>{api_price_uzs}</b> | Sotuv: <b>{sale_price}</b>\n"
+            line = f"• {c_name} ({c_code}): Asl: <b>{api_price_uzs}</b> | Sotuv: <b>{sale_price}</b>\n"
+            
+            if len(current_chunk) + len(line) > MAX_LEN:
+                chunks.append(current_chunk)
+                current_chunk = line
+            else:
+                current_chunk += line
+        if current_chunk:
+            chunks.append(current_chunk)
 
     kbd = InlineKeyboardMarkup([
         [InlineKeyboardButton("➕ Davlat qo'shish", callback_data="adm_add_country_list")],
@@ -50,9 +62,24 @@ async def adm_countries_handler(update: Update, context: ContextTypes.DEFAULT_TY
     ])
     
     if update.callback_query:
-        await update.callback_query.message.edit_text(text, parse_mode="HTML", reply_markup=kbd)
+        await update.callback_query.message.edit_text(
+            chunks[0], 
+            parse_mode="HTML", 
+            reply_markup=kbd if len(chunks) == 1 else None
+        )
+        for i in range(1, len(chunks)):
+            await update.callback_query.message.reply_text(
+                chunks[i], 
+                parse_mode="HTML", 
+                reply_markup=kbd if i == len(chunks) - 1 else None
+            )
     else:
-        await update.message.reply_text(text, parse_mode="HTML", reply_markup=kbd)
+        for i in range(len(chunks)):
+            await update.message.reply_text(
+                chunks[i], 
+                parse_mode="HTML", 
+                reply_markup=kbd if i == len(chunks) - 1 else None
+            )
 
 async def adm_back_to_catalog_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
