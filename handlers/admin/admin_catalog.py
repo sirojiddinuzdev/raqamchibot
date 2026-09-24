@@ -28,15 +28,22 @@ async def adm_countries_handler(update: Update, context: ContextTypes.DEFAULT_TY
 
     api_countries = await spider.get_countries()
 
-    MAX_LEN = 3800
-    chunks = []
-    current_chunk = "🌍 <b>Sotuvdagi davlatlar ro'yxati (Botda):</b>\n\n"
+    if not update.callback_query:
+        context.user_data["adm_country_page"] = 0
+        
+    page = context.user_data.get("adm_country_page", 0)
+    per_page = 20
+    
+    start_idx = page * per_page
+    end_idx = start_idx + per_page
+    page_rows = rows[start_idx:end_idx]
+
+    text = f"🌍 <b>Sotuvdagi davlatlar ro'yxati (Botda) - {page+1}-sahifa:</b>\n\n"
     
     if not rows:
-        current_chunk += "Hozircha davlatlar qo'shilmagan."
-        chunks.append(current_chunk)
+        text += "Hozircha davlatlar qo'shilmagan."
     else:
-        for k, v in rows:
+        for k, v in page_rows:
             c_code = k.replace("country_", "")
             c_name = get_country_name(c_code)
             api_price_usd = api_countries.get(c_code)
@@ -45,41 +52,38 @@ async def adm_countries_handler(update: Update, context: ContextTypes.DEFAULT_TY
             else:
                 api_price_uzs = "Noma'lum"
             sale_price = f"{int(float(v)):,.0f} so'm" if v else "0 so'm"
-            line = f"• {c_name} ({c_code}): Asl: <b>{api_price_uzs}</b> | Sotuv: <b>{sale_price}</b>\n"
-            
-            if len(current_chunk) + len(line) > MAX_LEN:
-                chunks.append(current_chunk)
-                current_chunk = line
-            else:
-                current_chunk += line
-        if current_chunk:
-            chunks.append(current_chunk)
+            text += f"• {c_name} ({c_code}): Asl: <b>{api_price_uzs}</b> | Sotuv: <b>{sale_price}</b>\n"
 
-    kbd = InlineKeyboardMarkup([
+    nav_buttons = []
+    if page > 0:
+        nav_buttons.append(InlineKeyboardButton("⬅️ Oldingi", callback_data=f"adm_country_page_{page - 1}"))
+    if end_idx < len(rows):
+        nav_buttons.append(InlineKeyboardButton("Keyingi ➡️", callback_data=f"adm_country_page_{page + 1}"))
+
+    kbd_buttons = []
+    if nav_buttons:
+        kbd_buttons.append(nav_buttons)
+
+    kbd_buttons.extend([
         [InlineKeyboardButton("➕ Davlat qo'shish", callback_data="adm_add_country_list")],
         [InlineKeyboardButton("✏️ Tahrirlash", callback_data="adm_edit_country_list")],
         [InlineKeyboardButton("➖ Davlatni o'chirish", callback_data="adm_remove_country_list")]
     ])
     
+    kbd = InlineKeyboardMarkup(kbd_buttons)
+    
     if update.callback_query:
-        await update.callback_query.message.edit_text(
-            chunks[0], 
-            parse_mode="HTML", 
-            reply_markup=kbd if len(chunks) == 1 else None
-        )
-        for i in range(1, len(chunks)):
-            await update.callback_query.message.reply_text(
-                chunks[i], 
-                parse_mode="HTML", 
-                reply_markup=kbd if i == len(chunks) - 1 else None
-            )
+        await update.callback_query.message.edit_text(text, parse_mode="HTML", reply_markup=kbd)
     else:
-        for i in range(len(chunks)):
-            await update.message.reply_text(
-                chunks[i], 
-                parse_mode="HTML", 
-                reply_markup=kbd if i == len(chunks) - 1 else None
-            )
+        await update.message.reply_text(text, parse_mode="HTML", reply_markup=kbd)
+
+async def adm_country_page_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    page = int(query.data.split("_")[-1])
+    context.user_data["adm_country_page"] = page
+    await adm_countries_handler(update, context)
 
 async def adm_back_to_catalog_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query

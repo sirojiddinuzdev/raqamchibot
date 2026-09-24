@@ -58,6 +58,7 @@ from handlers.admin import (
     adm_remove_country_list_callback,
     adm_del_country_callback,
     adm_back_to_catalog_callback,
+    adm_country_page_callback,
     adm_set_card_handler,
     adm_broadcast_handler,
     adm_pending_deps_handler,
@@ -282,6 +283,7 @@ def main():
     app.add_handler(CallbackQueryHandler(adm_remove_country_list_callback, pattern="^adm_remove_country_list$"))
     app.add_handler(CallbackQueryHandler(adm_del_country_callback, pattern=r"^adm_del_country_"))
     app.add_handler(CallbackQueryHandler(adm_back_to_catalog_callback, pattern="^adm_back_to_catalog$"))
+    app.add_handler(CallbackQueryHandler(adm_country_page_callback, pattern=r"^adm_country_page_\d+$"))
     app.add_handler(CallbackQueryHandler(adm_confirm_dep_callback, pattern=r"^confirm_dep_"))
     app.add_handler(CallbackQueryHandler(adm_reject_dep_callback, pattern=r"^reject_dep_"))
     app.add_handler(CallbackQueryHandler(adm_add_admin_callback, pattern="^adm_add_admin$"))
