@@ -209,7 +209,7 @@ async def universal_media_handler(update: Update, context: ContextTypes.DEFAULT_
 # ─── Bot buyruqlarini sozlash ─────────────────────────────────
 
 async def daily_backup_job(context: ContextTypes.DEFAULT_TYPE):
-    from config import DB_PATH
+    from database import DB_PATH
     import os
     if not os.path.exists(DB_PATH):
         return

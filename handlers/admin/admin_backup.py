@@ -3,7 +3,7 @@ import aiosqlite
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 import database as db
-from config import DB_PATH
+from database import DB_PATH
 from helpers import cancel_keyboard, admin_main_keyboard
 from handlers.admin.admin_core import is_admin
 
