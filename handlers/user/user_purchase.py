@@ -340,7 +340,9 @@ async def get_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         now_str = datetime.now().strftime("%H:%M:%S")
         try:
             await query.message.edit_text(
-                f"⏳ <b>SMS kod hali kelmadi.</b> ({now_str})\n\n"
+                f"🌍 Davlat: {purchase['country_name']}\n"
+                f"📱 Raqam: <code>{purchase['number']}</code>\n\n"
+                f"⏳ <b>SMS kod hali kelmadi.</b> ({now_str})\n"
                 "Biroz kuting va qayta tekshiring (1–3 daqiqa).",
                 parse_mode="HTML",
                 reply_markup=kbd

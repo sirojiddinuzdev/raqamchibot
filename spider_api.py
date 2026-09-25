@@ -69,5 +69,6 @@ class SpiderAPI:
                 "code": result.get("code"),
                 "password": result.get("password", ""),
             }
-        logger.warning(f"getCode xatolik: {data}")
+        if data.get("error") != "WITE_CODE":
+            logger.warning(f"getCode xatolik: {data}")
         return None
