@@ -4,6 +4,8 @@ Python-telegram-bot v22 (PTB) kutubxonasi
 """
 import logging
 import asyncio
+from datetime import time
+from zoneinfo import ZoneInfo
 from telegram import Update, BotCommand
 from telegram.ext import (
     Application,
