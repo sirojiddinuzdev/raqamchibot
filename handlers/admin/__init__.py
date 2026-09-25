@@ -42,6 +42,12 @@ from .admin_admins import (
     adm_remove_admin_callback,
     adm_del_admin_callback,
 )
+from .admin_backup import (
+    adm_backup_handler,
+    adm_download_backup_callback,
+    adm_restore_backup_callback,
+    adm_receive_db_document_handler
+)
 from .admin_text_handler import admin_text_handler
 
 __all__ = [

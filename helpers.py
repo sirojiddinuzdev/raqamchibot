@@ -78,6 +78,7 @@ def admin_main_keyboard() -> ReplyKeyboardMarkup:
             ["📢 Kanallar", "🌍 Davlatlar"],
             ["💳 Karta sozlash", "📨 Ommaviy xabar"],
             ["🎁 Promokodlar", "👮‍♂️ Adminlar"],
+            ["💾 Zahira nusxa"],
             ["🔙 Bosh menyuga"],
         ],
         resize_keyboard=True

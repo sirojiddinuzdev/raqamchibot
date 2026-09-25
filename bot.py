@@ -68,6 +68,10 @@ from handlers.admin import (
     adm_add_admin_callback,
     adm_remove_admin_callback,
     adm_del_admin_callback,
+    adm_backup_handler,
+    adm_download_backup_callback,
+    adm_restore_backup_callback,
+    adm_receive_db_document_handler,
 )
 from handlers.admin.admin_promocodes import (
     adm_promocodes_handler,
@@ -204,9 +208,37 @@ async def universal_media_handler(update: Update, context: ContextTypes.DEFAULT_
 
 # ─── Bot buyruqlarini sozlash ─────────────────────────────────
 
+async def daily_backup_job(context: ContextTypes.DEFAULT_TYPE):
+    from config import DB_PATH
+    import os
+    if not os.path.exists(DB_PATH):
+        return
+        
+    admins = await db.get_all_admins()
+    if not admins:
+        # DB returns empty if no admins, but there's always an initial admin
+        from config import ADMIN_IDS
+        admins = ADMIN_IDS
+        
+    for admin in admins:
+        try:
+            with open(DB_PATH, "rb") as f:
+                await context.bot.send_document(
+                    chat_id=admin, 
+                    document=f, 
+                    filename="database_backup.sqlite", 
+                    caption="💾 Kunlik avtomatik baza nusxasi."
+                )
+        except Exception as e:
+            logger.error(f"Failed to send backup to {admin}: {e}")
+
 async def post_init(application: Application):
     await db.init_db()
     logger.info("✅ Ma'lumotlar bazasi ishga tushdi")
+
+    t = time(hour=23, minute=30, tzinfo=ZoneInfo("Asia/Tashkent"))
+    application.job_queue.run_daily(daily_backup_job, time=t)
+    logger.info("✅ Kunlik zahira (23:30) jadvalga qo'shildi")
 
     commands = [
         BotCommand("start", "Botni ishga tushirish"),
@@ -256,6 +288,7 @@ def main():
     app.add_handler(MessageHandler(filters.Regex("^📨 Ommaviy xabar$"), adm_broadcast_handler))
     app.add_handler(MessageHandler(filters.Regex("^⏳ Kutayotgan to'lovlar$"), adm_pending_deps_handler))
     app.add_handler(MessageHandler(filters.Regex("^👮‍♂️ Adminlar$"), adm_admins_handler))
+    app.add_handler(MessageHandler(filters.Regex("^💾 Zahira nusxa$"), adm_backup_handler))
     app.add_handler(MessageHandler(filters.Regex("^🎁 Promokodlar$"), adm_promocodes_handler))
 
     # ── Qolgan Inline Callback lar ──
@@ -292,12 +325,19 @@ def main():
     app.add_handler(CallbackQueryHandler(adm_remove_admin_callback, pattern="^adm_remove_admin$"))
     app.add_handler(CallbackQueryHandler(adm_del_admin_callback, pattern=r"^adm_del_adm_\d+$"))
     
+    app.add_handler(CallbackQueryHandler(adm_download_backup_callback, pattern="^adm_download_backup$"))
+    app.add_handler(CallbackQueryHandler(adm_restore_backup_callback, pattern="^adm_restore_backup$"))
+    
     app.add_handler(CallbackQueryHandler(adm_add_promo_callback, pattern="^adm_add_promo$"))
     app.add_handler(CallbackQueryHandler(adm_del_promo_callback, pattern="^adm_del_promo$"))
     app.add_handler(CallbackQueryHandler(adm_del_promo_confirm_callback, pattern=r"^adm_del_promo_"))
     app.add_handler(CallbackQueryHandler(adm_promo_back_callback, pattern="^adm_promo_back$"))
 
     # ── Matn va media kiritish uchun handlerlar ──
+    app.add_handler(MessageHandler(
+        filters.Document.ALL, 
+        adm_receive_db_document_handler
+    ))
     app.add_handler(MessageHandler(
         filters.TEXT & ~filters.COMMAND,
         universal_text_handler
