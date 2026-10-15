@@ -137,7 +137,10 @@ async def adm_clist_page_callback(update: Update, context: ContextTypes.DEFAULT_
     items.sort(key=lambda x: x[1])
 
     kbd = paginated_keyboard(items, page, per_page=15, prefix="adm_clist", back_callback="adm_back_to_catalog")
-    await query.message.edit_reply_markup(reply_markup=kbd)
+    try:
+        await query.message.edit_reply_markup(reply_markup=kbd)
+    except Exception:
+        pass
 
 
 async def adm_pick_country_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):

@@ -98,7 +98,10 @@ async def country_page_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
     kbd = paginated_keyboard(items, page, per_page=14, prefix="country", back_callback=None)
     
-    await query.message.edit_reply_markup(reply_markup=kbd)
+    try:
+        await query.message.edit_reply_markup(reply_markup=kbd)
+    except Exception:
+        pass
 
 
 async def top_10_countries_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):

@@ -176,6 +176,8 @@ async def universal_text_handler(update: Update, context: ContextTypes.DEFAULT_T
 
 async def universal_media_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Media (rasm/video/ovozli) handler"""
+    if not update.effective_user:
+        return
     user_id = update.effective_user.id
     
     # Chek kutilayotgan bo'lsa
@@ -216,9 +218,10 @@ async def daily_backup_job(context: ContextTypes.DEFAULT_TYPE):
     if not os.path.exists(DB_PATH):
         return
         
-    admins = await db.get_all_admins()
-    if not admins:
-        # DB returns empty if no admins, but there's always an initial admin
+    admins = getattr(db, 'get_all_admins', None)
+    if admins:
+        admins = await db.get_all_admins()
+    else:
         from config import ADMIN_IDS
         admins = ADMIN_IDS
         
