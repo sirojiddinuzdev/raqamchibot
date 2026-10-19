@@ -67,7 +67,8 @@ async def adm_countries_handler(update: Update, context: ContextTypes.DEFAULT_TY
     kbd_buttons.extend([
         [InlineKeyboardButton("➕ Davlat qo'shish", callback_data="adm_add_country_list")],
         [InlineKeyboardButton("✏️ Tahrirlash", callback_data="adm_edit_country_list")],
-        [InlineKeyboardButton("➖ Davlatni o'chirish", callback_data="adm_remove_country_list")]
+        [InlineKeyboardButton("➖ Davlatni o'chirish", callback_data="adm_remove_country_list")],
+        [InlineKeyboardButton("📌 Xarid 1-sahifasini sozlash", callback_data="adm_firstpage")]
     ])
     
     kbd = InlineKeyboardMarkup(kbd_buttons)
@@ -89,6 +90,119 @@ async def adm_back_to_catalog_callback(update: Update, context: ContextTypes.DEF
     query = update.callback_query
     await query.answer()
     await adm_countries_handler(update, context)
+
+
+async def _show_first_page_countries(query, context: ContextTypes.DEFAULT_TYPE, page: int = 0):
+    async with aiosqlite.connect(DB_PATH) as dbase:
+        async with dbase.execute(
+            "SELECT key FROM settings WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"
+        ) as cur:
+            rows = await cur.fetchall()
+
+    countries = sorted(
+        (key.replace("country_", "") for (key,) in rows),
+        key=lambda code: get_country_name(code).casefold(),
+    )
+    selected_setting = await db.get_setting("purchase_first_page_order")
+    selected = [code for code in (selected_setting or "").split(",") if code in countries]
+
+    per_page = 14
+    page_countries = countries[page * per_page:(page + 1) * per_page]
+    buttons = []
+    for code in page_countries:
+        name = get_country_name(code)
+        if code in selected:
+            label = f"✅ {selected.index(code) + 1}. {name}"
+        else:
+            label = f"▫️ {name}"
+        buttons.append([InlineKeyboardButton(label, callback_data=f"adm_firstpage_toggle_{code}")])
+
+    navigation = []
+    if page > 0:
+        navigation.append(InlineKeyboardButton("⬅️", callback_data=f"adm_firstpage_page_{page - 1}"))
+    if (page + 1) * per_page < len(countries):
+        navigation.append(InlineKeyboardButton("➡️", callback_data=f"adm_firstpage_page_{page + 1}"))
+    if navigation:
+        buttons.append(navigation)
+
+    buttons.append([InlineKeyboardButton("🧹 Tanlovni tozalash", callback_data="adm_firstpage_clear")])
+    buttons.append([InlineKeyboardButton("🔙 Davlatlar katalogiga", callback_data="adm_back_to_catalog")])
+    selected_names = [get_country_name(code) for code in selected]
+    selected_text = "\n".join(
+        f"{index}. {name}" for index, name in enumerate(selected_names, start=1)
+    ) or "Hozircha tanlanmagan"
+    await query.message.edit_text(
+        "📌 <b>Xarid ro'yxatining 1-sahifasida ko'rinadigan davlatlarni tanlang.</b>\n"
+        "Tanlangan davlatlar bosilgan tartibda chiqadi; qolganlari alifbo tartibida joylashadi "
+        "(1-sahifa 14 ta davlat bilan to'ldiriladi).\n\n"
+        f"<b>Tanlanganlar ({len(selected)}/14):</b>\n{selected_text}",
+        parse_mode="HTML",
+        reply_markup=InlineKeyboardMarkup(buttons),
+    )
+
+
+async def adm_firstpage_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    if not await is_admin(query.from_user.id):
+        return
+    context.user_data["adm_firstpage"] = 0
+    await _show_first_page_countries(query, context)
+
+
+async def adm_firstpage_page_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    if not await is_admin(query.from_user.id):
+        return
+    page = int(query.data.rsplit("_", 1)[-1])
+    context.user_data["adm_firstpage"] = page
+    await _show_first_page_countries(query, context, page)
+
+
+async def adm_firstpage_toggle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if not await is_admin(query.from_user.id):
+        await query.answer()
+        return
+
+    code = query.data.removeprefix("adm_firstpage_toggle_")
+    async with aiosqlite.connect(DB_PATH) as dbase:
+        async with dbase.execute(
+            "SELECT key FROM settings WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"
+        ) as cur:
+            active_codes = {
+                key.replace("country_", "") for (key,) in await cur.fetchall()
+            }
+    current = await db.get_setting("purchase_first_page_order")
+    selected = [
+        item for item in (current or "").split(",")
+        if item in active_codes
+    ]
+    if code in selected:
+        selected.remove(code)
+    elif len(selected) >= 14:
+        await query.answer("1-sahifaga ko'pi bilan 14 ta davlat tanlanadi.", show_alert=True)
+        return
+    else:
+        selected.append(code)
+
+    await db.set_setting("purchase_first_page_order", ",".join(selected))
+    await query.answer()
+    await _show_first_page_countries(
+        query, context, context.user_data.get("adm_firstpage", 0)
+    )
+
+
+async def adm_firstpage_clear_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    if not await is_admin(query.from_user.id):
+        return
+    await db.set_setting("purchase_first_page_order", "")
+    await _show_first_page_countries(
+        query, context, context.user_data.get("adm_firstpage", 0)
+    )
 
 
 async def adm_add_country_list_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -249,6 +363,12 @@ async def adm_del_country_callback(update: Update, context: ContextTypes.DEFAULT
     name = get_country_name(code)
 
     await db.del_setting(f"country_{code}")
+    first_page_order = await db.get_setting("purchase_first_page_order")
+    selected = [
+        item for item in (first_page_order or "").split(",")
+        if item != code
+    ]
+    await db.set_setting("purchase_first_page_order", ",".join(selected))
     await query.message.edit_text(f"✅ <b>{name}</b> sotuvdan olib tashlandi.", parse_mode="HTML")
 
 

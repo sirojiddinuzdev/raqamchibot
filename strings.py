@@ -24,10 +24,10 @@ MENU_BUY = {
     "en": "📱 Buy Number",
     "ru": "📱 Купить номер",
 }
-MENU_TOP10 = {
-    "uz": "🔝 Top 10 arzon raqamlar",
-    "en": "🔝 Top 10 cheap numbers",
-    "ru": "🔝 Топ 10 дешёвых номеров",
+BUY_TOP_CHEAP_BTN = {
+    "uz": "🔝 Eng arzon davlatlar",
+    "en": "🔝 Cheapest countries",
+    "ru": "🔝 Самые дешёвые страны",
 }
 MENU_DEPOSIT = {
     "uz": "💳 Hisobni to'ldirish",

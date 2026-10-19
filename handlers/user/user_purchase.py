@@ -16,6 +16,55 @@ import strings as s
 spider = SpiderAPI(SPIDER_API_KEY)
 
 
+async def _load_country_items() -> list[tuple[str, str, float]]:
+    async with aiosqlite.connect(DB_PATH) as dbase:
+        async with dbase.execute(
+            "SELECT key, value FROM settings WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"
+        ) as cur:
+            rows = await cur.fetchall()
+
+    countries = []
+    for key, value in rows:
+        code = key.replace("country_", "")
+        try:
+            countries.append((code, get_country_name(code), float(value)))
+        except (TypeError, ValueError):
+            continue
+    return countries
+
+
+async def _get_country_menu_items() -> list[tuple[str, str]]:
+    countries = await _load_country_items()
+    alphabetical = sorted(countries, key=lambda item: item[1].casefold())
+
+    first_page_order = await db.get_setting("purchase_first_page_order")
+    selected_codes = [code for code in (first_page_order or "").split(",") if code]
+    active_by_code = {code: (code, name, price) for code, name, price in alphabetical}
+
+    featured = [active_by_code[code] for code in selected_codes if code in active_by_code]
+    featured_codes = {code for code, _, _ in featured}
+    remaining = [item for item in alphabetical if item[0] not in featured_codes]
+
+    countries = featured + remaining
+    return [
+        (f"select_country_{code}", f"{name} | {int(price):,} so'm")
+        for code, name, price in countries
+    ]
+
+
+def _country_keyboard(items: list[tuple[str, str]], page: int, lang: str) -> InlineKeyboardMarkup:
+    keyboard = paginated_keyboard(
+        items, page, per_page=14, prefix="country", back_callback=None, lang=lang
+    )
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(
+            s.BUY_TOP_CHEAP_BTN.get(lang, s.BUY_TOP_CHEAP_BTN["uz"]),
+            callback_data="top_cheap_countries",
+        )],
+        *keyboard.inline_keyboard,
+    ])
+
+
 async def buy_number_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await ensure_subscribed(update, context):
         return
@@ -29,36 +78,15 @@ async def buy_number_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     await update.message.reply_text(s.LOADING_COUNTRIES.get(lang, s.LOADING_COUNTRIES["uz"]))
 
-    async with aiosqlite.connect(DB_PATH) as dbase:
-        async with dbase.execute(
-            "SELECT key, value FROM settings WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"
-        ) as cur:
-            rows = await cur.fetchall()
-
-    admin_countries = {}
-    for key, val in rows:
-        code = key.replace("country_", "")
-        try:
-            admin_countries[code] = float(val)
-        except Exception:
-            pass
-
-    if not admin_countries:
+    items = await _get_country_menu_items()
+    if not items:
         await update.message.reply_text(
             s.NO_COUNTRIES.get(lang, s.NO_COUNTRIES["uz"]),
             reply_markup=main_menu_keyboard(await is_admin(user_id), lang)
         )
         return
 
-    items = []
-    for code, price in admin_countries.items():
-        name = get_country_name(code)
-        items.append((f"select_country_{code}", f"{name} | {int(price):,} so'm"))
-
-    items.sort(key=lambda x: x[1])
-
-    kbd = paginated_keyboard(items, 0, per_page=14, prefix="country", back_callback=None, lang=lang)
-
+    kbd = _country_keyboard(items, 0, lang)
     context.user_data["country_page"] = 0
     await update.message.reply_text(
         s.SELECT_COUNTRY.get(lang, s.SELECT_COUNTRY["uz"]),
@@ -70,73 +98,41 @@ async def buy_number_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def country_page_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    page = int(query.data.split("_")[-1])
+    page = 0 if query.data == "show_countries" else int(query.data.split("_")[-1])
     context.user_data["country_page"] = page
-    user_id = query.from_user.id
-    lang = await _get_lang(user_id)
-
-    async with aiosqlite.connect(DB_PATH) as dbase:
-        async with dbase.execute(
-            "SELECT key, value FROM settings WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"
-        ) as cur:
-            rows = await cur.fetchall()
-
-    admin_countries = {}
-    for key, val in rows:
-        code = key.replace("country_", "")
-        try:
-            admin_countries[code] = float(val)
-        except Exception:
-            pass
-
-    items = []
-    for code, price in admin_countries.items():
-        name = get_country_name(code)
-        items.append((f"select_country_{code}", f"{name} | {int(price):,} so'm"))
-
-    items.sort(key=lambda x: x[1])
-
-    kbd = paginated_keyboard(items, page, per_page=14, prefix="country", back_callback=None, lang=lang)
-
-    try:
-        await query.message.edit_reply_markup(reply_markup=kbd)
-    except Exception:
-        pass
+    lang = await _get_lang(query.from_user.id)
+    items = await _get_country_menu_items()
+    keyboard = _country_keyboard(items, page, lang)
+    if query.data == "show_countries":
+        await query.message.edit_text(
+            s.SELECT_COUNTRY.get(lang, s.SELECT_COUNTRY["uz"]),
+            parse_mode="HTML",
+            reply_markup=keyboard,
+        )
+    else:
+        await query.message.edit_reply_markup(reply_markup=keyboard)
 
 
 async def top_10_countries_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
+    query = update.callback_query
+    if query:
+        await query.answer()
+        user_id = query.from_user.id
+    else:
+        user_id = update.effective_user.id
     lang = await _get_lang(user_id)
     user_data = await db.get_user(user_id)
     if user_data and user_data["is_banned"]:
         return
 
-    async with aiosqlite.connect(DB_PATH) as dbase:
-        async with dbase.execute(
-            "SELECT key, value FROM settings WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"
-        ) as cur:
-            rows = await cur.fetchall()
-
-    admin_countries = []
-    for key, val in rows:
-        code = key.replace("country_", "")
-        try:
-            admin_countries.append((code, float(val)))
-        except Exception:
-            pass
-
-    items = []
-    for code, price in admin_countries:
-        name = get_country_name(code)
-        items.append((f"select_country_{code}", f"{name} | {int(price):,} so'm", price))
-
-    items.sort(key=lambda x: x[2])
-    top_10 = items[:10]
+    countries = await _load_country_items()
+    top_10 = sorted(countries, key=lambda item: item[2])[:10]
 
     buttons = []
     row = []
-    for cb, label, price in top_10:
-        row.append(InlineKeyboardButton(label, callback_data=cb))
+    for code, name, price in top_10:
+        label = f"{name} | {int(price):,} so'm"
+        row.append(InlineKeyboardButton(label, callback_data=f"select_country_{code}"))
         if len(row) == 2:
             buttons.append(row)
             row = []
@@ -145,14 +141,15 @@ async def top_10_countries_handler(update: Update, context: ContextTypes.DEFAULT
 
     buttons.append([InlineKeyboardButton(
         s.TOP10_ALL_BTN.get(lang, s.TOP10_ALL_BTN["uz"]),
-        callback_data="page_country_0"
+        callback_data="show_countries"
     )])
 
-    await update.message.reply_text(
-        s.TOP10_TITLE.get(lang, s.TOP10_TITLE["uz"]),
-        parse_mode="HTML",
-        reply_markup=InlineKeyboardMarkup(buttons)
-    )
+    text = s.TOP10_TITLE.get(lang, s.TOP10_TITLE["uz"])
+    keyboard = InlineKeyboardMarkup(buttons)
+    if query:
+        await query.message.edit_text(text, parse_mode="HTML", reply_markup=keyboard)
+    else:
+        await update.message.reply_text(text, parse_mode="HTML", reply_markup=keyboard)
 
 
 async def select_country_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):

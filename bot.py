@@ -64,6 +64,10 @@ from handlers.admin import (
     adm_del_country_callback,
     adm_back_to_catalog_callback,
     adm_country_page_callback,
+    adm_firstpage_handler,
+    adm_firstpage_page_callback,
+    adm_firstpage_toggle_callback,
+    adm_firstpage_clear_callback,
     adm_set_card_handler,
     adm_broadcast_handler,
     adm_pending_deps_handler,
@@ -282,8 +286,6 @@ def main():
     # ── Reply Keyboard matnlari (Foydalanuvchi) — 3 tilda ──
     # Raqam sotib olish (uz/en/ru)
     app.add_handler(MessageHandler(filters.Regex("^📱 (Raqam sotib olish|Buy Number|Купить номер)$"), buy_number_handler))
-    # Top 10
-    app.add_handler(MessageHandler(filters.Regex("^🔝"), top_10_countries_handler))
     # Hisobni to'ldirish
     app.add_handler(MessageHandler(filters.Regex("^💳 (Hisobni to'ldirish|Top up balance|Пополнить баланс)$"), deposit_handler))
     # Hisobim
@@ -319,6 +321,8 @@ def main():
     app.add_handler(CallbackQueryHandler(set_lang_callback, pattern=r"^set_lang_"))
     app.add_handler(CallbackQueryHandler(check_subscription_callback, pattern="^check_sub$"))
     app.add_handler(CallbackQueryHandler(country_page_callback, pattern=r"^page_country_\d+$"))
+    app.add_handler(CallbackQueryHandler(country_page_callback, pattern=r"^show_countries$"))
+    app.add_handler(CallbackQueryHandler(top_10_countries_handler, pattern=r"^top_cheap_countries$"))
     app.add_handler(CallbackQueryHandler(select_country_callback, pattern=r"^select_country_"))
     app.add_handler(CallbackQueryHandler(cancel_buy_callback, pattern="^cancel_buy$"))
     app.add_handler(CallbackQueryHandler(confirm_buy_callback, pattern="^confirm_buy$"))
@@ -344,6 +348,10 @@ def main():
     app.add_handler(CallbackQueryHandler(adm_del_country_callback, pattern=r"^adm_del_country_"))
     app.add_handler(CallbackQueryHandler(adm_back_to_catalog_callback, pattern="^adm_back_to_catalog$"))
     app.add_handler(CallbackQueryHandler(adm_country_page_callback, pattern=r"^adm_country_page_\d+$"))
+    app.add_handler(CallbackQueryHandler(adm_firstpage_handler, pattern=r"^adm_firstpage$"))
+    app.add_handler(CallbackQueryHandler(adm_firstpage_page_callback, pattern=r"^adm_firstpage_page_\d+$"))
+    app.add_handler(CallbackQueryHandler(adm_firstpage_toggle_callback, pattern=r"^adm_firstpage_toggle_"))
+    app.add_handler(CallbackQueryHandler(adm_firstpage_clear_callback, pattern=r"^adm_firstpage_clear$"))
     app.add_handler(CallbackQueryHandler(adm_confirm_dep_callback, pattern=r"^confirm_dep_"))
     app.add_handler(CallbackQueryHandler(adm_reject_dep_callback, pattern=r"^reject_dep_"))
     app.add_handler(CallbackQueryHandler(adm_add_admin_callback, pattern="^adm_add_admin$"))
