@@ -21,7 +21,10 @@ from config import BOT_TOKEN, ADMIN_IDS
 import database as db
 from handlers.user import (
     start_handler,
+    set_lang_callback,
+    change_lang_handler,
     check_subscription_callback,
+    chat_join_request_handler,
     back_to_main_handler,
     my_balance_handler,
     contact_admin_handler,
@@ -108,15 +111,20 @@ async def universal_text_handler(update: Update, context: ContextTypes.DEFAULT_T
     """Matn handlerlarini to'g'ri yo'naltirish"""
     if not update.effective_user:
         return
-    
+
     user_id = update.effective_user.id
+    text = update.message.text or ""
     from handlers.admin.admin_core import is_admin
+
+    # Cancel tugmasi — barcha tillarda
+    CANCEL_TEXTS = {"❌ Bekor qilish", "❌ Cancel", "❌ Отмена"}
+    BACK_TEXTS = {"🔙 Bosh menyuga", "🔙 Back to menu", "🔙 В главное меню"}
+
     # Admin action lari uchun
     if await is_admin(user_id):
         adm_action = context.user_data.get("adm_action", "")
         if adm_action:
-            # Bekor qilish tugmasi admin amali uchun
-            if update.message.text == "❌ Bekor qilish":
+            if text == "❌ Bekor qilish":
                 context.user_data.clear()
                 from helpers import admin_main_keyboard
                 await update.message.reply_text("Bekor qilindi.", reply_markup=admin_main_keyboard())
@@ -127,45 +135,47 @@ async def universal_text_handler(update: Update, context: ContextTypes.DEFAULT_T
 
     # Foydalanuvchi summa kiritayotganda
     if context.user_data.get("awaiting_deposit_amount"):
-        if update.message.text == "❌ Bekor qilish":
+        if text in CANCEL_TEXTS:
             context.user_data.clear()
             await back_to_main_handler(update, context)
             return
-        
         try:
-            amount_text = update.message.text.replace(" ", "").replace(",", "").replace(".", "")
+            amount_text = text.replace(" ", "").replace(",", "").replace(".", "")
             amount = int(amount_text)
             if amount < 1000:
-                await update.message.reply_text("❌ Eng kam to'lov summasi 1,000 so'm.")
+                from handlers.user.user_core import _get_lang
+                lang = await _get_lang(user_id)
+                mins = {"uz": "❌ Eng kam to'lov summasi 1,000 so'm.", "en": "❌ Minimum deposit is 1,000 UZS.", "ru": "❌ Минимальная сумма пополнения 1,000 сум."}
+                await update.message.reply_text(mins.get(lang, mins["uz"]))
                 return
             context.user_data["deposit_amount"] = amount
             context.user_data.pop("awaiting_deposit_amount", None)
-            
-            # Endi rasm so'rash
             from handlers.user.user_deposit import start_deposit_process
             await start_deposit_process(update, context)
             return
         except ValueError:
-            await update.message.reply_text("❌ Noto'g'ri summa kiritildi. Iltimos, faqat raqamlardan foydalaning.")
+            from handlers.user.user_core import _get_lang
+            lang = await _get_lang(user_id)
+            errs = {"uz": "❌ Noto'g'ri summa. Faqat raqamlardan foydalaning.", "en": "❌ Invalid amount. Use numbers only.", "ru": "❌ Неверная сумма. Используйте только цифры."}
+            await update.message.reply_text(errs.get(lang, errs["uz"]))
             return
 
     # Foydalanuvchi chek yuborish holatida
     if context.user_data.get("awaiting_deposit_check"):
-        if update.message.text == "❌ Bekor qilish":
+        if text in CANCEL_TEXTS:
             context.user_data.clear()
             await back_to_main_handler(update, context)
             return
-            
-        await update.message.reply_text(
-            "📸 Iltimos, chek <b>rasmini</b> yoki faylini yuboring.",
-            parse_mode="HTML"
-        )
+        from handlers.user.user_core import _get_lang
+        lang = await _get_lang(user_id)
+        photo_prompts = {"uz": "📸 Iltimos, chek <b>rasmini</b> yoki faylini yuboring.", "en": "📸 Please send a <b>photo</b> or file of your receipt.", "ru": "📸 Пожалуйста, отправьте <b>фото</b> или файл чека."}
+        await update.message.reply_text(photo_prompts.get(lang, photo_prompts["uz"]), parse_mode="HTML")
         return
 
     # Foydalanuvchi promo kod kiritishi
     user_action = context.user_data.get("user_action")
     if user_action == "use_promo":
-        if update.message.text == "❌ Bekor qilish":
+        if text in CANCEL_TEXTS:
             context.user_data.clear()
             await back_to_main_handler(update, context)
             return
@@ -267,16 +277,25 @@ def main():
     app.add_handler(MessageHandler(filters.Regex("^(👨‍💻 Admin Panel|🔙 Orqaga)$"), admin_command))
 
     # ── Reply Keyboard matnlari (Foydalanuvchi) ──
-    from handlers.user.user_core import chat_join_request_handler
     app.add_handler(ChatJoinRequestHandler(chat_join_request_handler))
 
-    app.add_handler(MessageHandler(filters.Regex("^📱 Raqam sotib olish$"), buy_number_handler))
-    app.add_handler(MessageHandler(filters.Regex("^🔝 Top 10 arzon raqamlar$"), top_10_countries_handler))
-    app.add_handler(MessageHandler(filters.Regex("^💳 Hisobni to'ldirish$"), deposit_handler))
-    app.add_handler(MessageHandler(filters.Regex("^💰 Hisobim$"), my_balance_handler))
-    app.add_handler(MessageHandler(filters.Regex("^📞 Admin bilan bog'lanish$"), contact_admin_handler))
-    app.add_handler(MessageHandler(filters.Regex("^🔙 Bosh menyuga$"), back_to_main_handler))
-    app.add_handler(MessageHandler(filters.Regex("^🎁 Promokod$"), user_promo_handler))
+    # ── Reply Keyboard matnlari (Foydalanuvchi) — 3 tilda ──
+    # Raqam sotib olish (uz/en/ru)
+    app.add_handler(MessageHandler(filters.Regex("^📱 (Raqam sotib olish|Buy Number|Купить номер)$"), buy_number_handler))
+    # Top 10
+    app.add_handler(MessageHandler(filters.Regex("^🔝"), top_10_countries_handler))
+    # Hisobni to'ldirish
+    app.add_handler(MessageHandler(filters.Regex("^💳 (Hisobni to'ldirish|Top up balance|Пополнить баланс)$"), deposit_handler))
+    # Hisobim
+    app.add_handler(MessageHandler(filters.Regex("^💰 (Hisobim|My balance|Мой баланс)$"), my_balance_handler))
+    # Admin bilan bog'lanish
+    app.add_handler(MessageHandler(filters.Regex("^📞"), contact_admin_handler))
+    # Bosh menyuga
+    app.add_handler(MessageHandler(filters.Regex("^🔙 (Bosh menyuga|Back to menu|В главное меню)$"), back_to_main_handler))
+    # Promokod
+    app.add_handler(MessageHandler(filters.Regex("^🎁 (Promokod|Promo code|Промокод)$"), user_promo_handler))
+    # Til almashtirish
+    app.add_handler(MessageHandler(filters.Regex("^🌐"), change_lang_handler))
 
     # ── Reply Keyboard matnlari (Admin) ──
     app.add_handler(MessageHandler(filters.Regex("^📊 Statistika$"), adm_stats_handler))
@@ -297,6 +316,7 @@ def main():
     app.add_handler(MessageHandler(filters.Regex("^🎁 Promokodlar$"), adm_promocodes_handler))
 
     # ── Qolgan Inline Callback lar ──
+    app.add_handler(CallbackQueryHandler(set_lang_callback, pattern=r"^set_lang_"))
     app.add_handler(CallbackQueryHandler(check_subscription_callback, pattern="^check_sub$"))
     app.add_handler(CallbackQueryHandler(country_page_callback, pattern=r"^page_country_\d+$"))
     app.add_handler(CallbackQueryHandler(select_country_callback, pattern=r"^select_country_"))

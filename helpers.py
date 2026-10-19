@@ -1,5 +1,5 @@
 """
-Yordamchi funksiyalar — kanal tekshirish, klaviatura, va b.
+helpers.py — Ko'p tilli klaviaturalar va yordamchi funksiyalar
 """
 from telegram import (
     Bot,
@@ -12,6 +12,11 @@ from telegram import (
 from telegram.error import TelegramError
 import logging
 import database as db
+from strings import (
+    MENU_BUY, MENU_TOP10, MENU_DEPOSIT, MENU_BALANCE,
+    MENU_CONTACT, MENU_PROMO, MENU_BACK, MENU_CANCEL,
+    MENU_ADMIN, LANG_BTN, LANG_FLAGS, SUB_BTN,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,8 +39,8 @@ async def check_user_subscribed(bot: Bot, user_id: int, channels: list[dict]) ->
     return not_subscribed
 
 
-def build_subscribe_keyboard(not_subscribed: list[dict], check_callback: str = "check_sub") -> InlineKeyboardMarkup:
-    """Obuna bo'lish uchun inline URL tugmalar (URLlar faqat inline ishlaydi)"""
+def build_subscribe_keyboard(not_subscribed: list[dict], check_callback: str = "check_sub", lang: str = "uz") -> InlineKeyboardMarkup:
+    """Obuna bo'lish uchun inline URL tugmalar"""
     buttons = []
     for ch in not_subscribed:
         buttons.append([
@@ -45,32 +50,31 @@ def build_subscribe_keyboard(not_subscribed: list[dict], check_callback: str = "
             )
         ])
     buttons.append([
-        InlineKeyboardButton("✅ Obuna bo'ldim", callback_data=check_callback)
+        InlineKeyboardButton(SUB_BTN.get(lang, SUB_BTN["uz"]), callback_data=check_callback)
     ])
     return InlineKeyboardMarkup(buttons)
 
 
 # ─── Reply Klaviaturalar (pastda turuvchi tugmalar) ───────────
 
-def main_menu_keyboard(is_admin: bool = False) -> ReplyKeyboardMarkup:
-    """Foydalanuvchi asosiy menyusi — pastda doim ko'rinadi"""
+def main_menu_keyboard(is_admin: bool = False, lang: str = "uz") -> ReplyKeyboardMarkup:
+    """Foydalanuvchi asosiy menyusi"""
+    lang_label = LANG_BTN.get(lang, LANG_BTN["uz"])
     keys = [
-        ["📱 Raqam sotib olish"],
-        ["🔝 Top 10 arzon raqamlar"],
-        ["💳 Hisobni to'ldirish", "💰 Hisobim"],
-        ["📞 Admin bilan bog'lanish", "🎁 Promokod"],
+        [MENU_BUY.get(lang, MENU_BUY["uz"])],
+        [MENU_TOP10.get(lang, MENU_TOP10["uz"])],
+        [MENU_DEPOSIT.get(lang, MENU_DEPOSIT["uz"]), MENU_BALANCE.get(lang, MENU_BALANCE["uz"])],
+        [MENU_CONTACT.get(lang, MENU_CONTACT["uz"]), MENU_PROMO.get(lang, MENU_PROMO["uz"])],
+        [lang_label],
     ]
     if is_admin:
-        keys.append(["👨‍💻 Admin Panel"])
+        keys.append([MENU_ADMIN.get(lang, MENU_ADMIN["uz"])])
 
-    return ReplyKeyboardMarkup(
-        keys,
-        resize_keyboard=True
-    )
+    return ReplyKeyboardMarkup(keys, resize_keyboard=True)
 
 
 def admin_main_keyboard() -> ReplyKeyboardMarkup:
-    """Admin asosiy menyusi — pastda doim ko'rinadi"""
+    """Admin asosiy menyusi — O'zbekchada qoladi"""
     return ReplyKeyboardMarkup(
         [
             ["📊 Statistika", "⏳ Kutayotgan to'lovlar"],
@@ -85,68 +89,61 @@ def admin_main_keyboard() -> ReplyKeyboardMarkup:
     )
 
 
-def back_to_main_keyboard() -> ReplyKeyboardMarkup:
+def back_to_main_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
     """Faqat orqaga tugmasi"""
     return ReplyKeyboardMarkup(
-        [["🔙 Bosh menyuga"]],
+        [[MENU_BACK.get(lang, MENU_BACK["uz"])]],
         resize_keyboard=True,
     )
 
 
-def cancel_keyboard() -> ReplyKeyboardMarkup:
+def cancel_keyboard(lang: str = "uz") -> ReplyKeyboardMarkup:
     """Bekor qilish tugmasi"""
     return ReplyKeyboardMarkup(
-        [["❌ Bekor qilish"]],
+        [[MENU_CANCEL.get(lang, MENU_CANCEL["uz"])]],
         resize_keyboard=True,
+        one_time_keyboard=True
     )
 
 
-# ─── Inline Klaviaturalar (xabarlarga biriktirilgan) ─────────
+def lang_select_keyboard() -> InlineKeyboardMarkup:
+    """Til tanlash inline klaviaturasi (barcha tillarda ko'rinadi)"""
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🇺🇿 O'zbekcha", callback_data="set_lang_uz"),
+            InlineKeyboardButton("🇬🇧 English", callback_data="set_lang_en"),
+            InlineKeyboardButton("🇷🇺 Русский", callback_data="set_lang_ru"),
+        ]
+    ])
+
 
 def paginated_keyboard(
-    items: list[tuple],
+    items: list[tuple[str, str]],
     page: int,
-    per_page: int = 10,
-    prefix: str = "country",
-    back_callback: str = "back_main_inline",
-    top_button: list = None,
+    per_page: int = 14,
+    prefix: str = "page",
+    back_callback: str | None = None,
+    lang: str = "uz"
 ) -> InlineKeyboardMarkup:
-    """
-    Sahifalangan inline tugmalar.
-    items: [(callback_data, label), ...]
-    """
+    """Sahifalangan inline klaviatura"""
+    total = len(items)
     start = page * per_page
-    end = start + per_page
+    end = min(start + per_page, total)
     page_items = items[start:end]
 
     buttons = []
-    if top_button:
-        buttons.append(top_button)
-    
-    row = []
-    for i, (cb, label) in enumerate(page_items):
-        row.append(InlineKeyboardButton(label, callback_data=cb))
-        if len(row) == 2:
-            buttons.append(row)
-            row = []
-    if row:
-        buttons.append(row)
+    for cb_data, label in page_items:
+        buttons.append([InlineKeyboardButton(label, callback_data=cb_data)])
 
     nav = []
     if page > 0:
-        nav.append(InlineKeyboardButton("⬅️ Oldingi", callback_data=f"page_{prefix}_{page - 1}"))
-    if end < len(items):
-        nav.append(InlineKeyboardButton("Keyingi ➡️", callback_data=f"page_{prefix}_{page + 1}"))
+        nav.append(InlineKeyboardButton("⬅️", callback_data=f"page_{prefix}_{page - 1}"))
+    if end < total:
+        nav.append(InlineKeyboardButton("➡️", callback_data=f"page_{prefix}_{page + 1}"))
     if nav:
         buttons.append(nav)
-        
+
     if back_callback:
-        buttons.append([InlineKeyboardButton("🔙 Orqaga", callback_data=back_callback)])
+        buttons.append([InlineKeyboardButton("🔙", callback_data=back_callback)])
 
     return InlineKeyboardMarkup(buttons)
-
-
-def back_inline(callback: str = "back_main_inline") -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔙 Orqaga", callback_data=callback)]
-    ])

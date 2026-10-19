@@ -5,32 +5,30 @@ import html
 
 import database as db
 from database import DB_PATH
-from helpers import (
-    main_menu_keyboard,
-    paginated_keyboard,
-)
+from helpers import main_menu_keyboard, paginated_keyboard
 from countries import get_country_name
 from spider_api import SpiderAPI
 from config import SPIDER_API_KEY
-from handlers.user.user_core import ensure_subscribed
+from handlers.user.user_core import ensure_subscribed, _get_lang
 from handlers.admin.admin_core import is_admin
+import strings as s
 
 spider = SpiderAPI(SPIDER_API_KEY)
 
 
 async def buy_number_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """'📱 Raqam sotib olish' tugmasi"""
     if not await ensure_subscribed(update, context):
         return
 
-    user_data = await db.get_user(update.effective_user.id)
+    user_id = update.effective_user.id
+    lang = await _get_lang(user_id)
+    user_data = await db.get_user(user_id)
     if user_data and user_data["is_banned"]:
-        await update.message.reply_text("🚫 Siz bloklangansiz.")
+        await update.message.reply_text(s.BANNED.get(lang, s.BANNED["uz"]))
         return
 
-    await update.message.reply_text("⏳ Mavjud davlatlar yuklanmoqda...")
+    await update.message.reply_text(s.LOADING_COUNTRIES.get(lang, s.LOADING_COUNTRIES["uz"]))
 
-    # DB dan faqat admin qo'shgan davlatlarni olish
     async with aiosqlite.connect(DB_PATH) as dbase:
         async with dbase.execute(
             "SELECT key, value FROM settings WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"
@@ -47,8 +45,8 @@ async def buy_number_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     if not admin_countries:
         await update.message.reply_text(
-            "❌ Hozircha sotuvda davlatlar yo'q.\nKeyinroq urinib ko'ring.",
-            reply_markup=main_menu_keyboard(await is_admin(update.effective_user.id))
+            s.NO_COUNTRIES.get(lang, s.NO_COUNTRIES["uz"]),
+            reply_markup=main_menu_keyboard(await is_admin(user_id), lang)
         )
         return
 
@@ -57,13 +55,13 @@ async def buy_number_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         name = get_country_name(code)
         items.append((f"select_country_{code}", f"{name} | {int(price):,} so'm"))
 
-    items.sort(key=lambda x: x[1])  # sort by name
+    items.sort(key=lambda x: x[1])
 
-    kbd = paginated_keyboard(items, 0, per_page=14, prefix="country", back_callback=None)
+    kbd = paginated_keyboard(items, 0, per_page=14, prefix="country", back_callback=None, lang=lang)
 
     context.user_data["country_page"] = 0
     await update.message.reply_text(
-        "🌍 <b>Davlat tanlang</b>\n\nQuyidagi davlatlardan birini tanlang:",
+        s.SELECT_COUNTRY.get(lang, s.SELECT_COUNTRY["uz"]),
         parse_mode="HTML",
         reply_markup=kbd
     )
@@ -74,6 +72,8 @@ async def country_page_callback(update: Update, context: ContextTypes.DEFAULT_TY
     await query.answer()
     page = int(query.data.split("_")[-1])
     context.user_data["country_page"] = page
+    user_id = query.from_user.id
+    lang = await _get_lang(user_id)
 
     async with aiosqlite.connect(DB_PATH) as dbase:
         async with dbase.execute(
@@ -96,8 +96,8 @@ async def country_page_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
     items.sort(key=lambda x: x[1])
 
-    kbd = paginated_keyboard(items, page, per_page=14, prefix="country", back_callback=None)
-    
+    kbd = paginated_keyboard(items, page, per_page=14, prefix="country", back_callback=None, lang=lang)
+
     try:
         await query.message.edit_reply_markup(reply_markup=kbd)
     except Exception:
@@ -106,6 +106,7 @@ async def country_page_callback(update: Update, context: ContextTypes.DEFAULT_TY
 
 async def top_10_countries_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+    lang = await _get_lang(user_id)
     user_data = await db.get_user(user_id)
     if user_data and user_data["is_banned"]:
         return
@@ -129,7 +130,7 @@ async def top_10_countries_handler(update: Update, context: ContextTypes.DEFAULT
         name = get_country_name(code)
         items.append((f"select_country_{code}", f"{name} | {int(price):,} so'm", price))
 
-    items.sort(key=lambda x: x[2])  # sort by price ascending
+    items.sort(key=lambda x: x[2])
     top_10 = items[:10]
 
     buttons = []
@@ -142,10 +143,13 @@ async def top_10_countries_handler(update: Update, context: ContextTypes.DEFAULT
     if row:
         buttons.append(row)
 
-    buttons.append([InlineKeyboardButton("🔙 Barcha davlatlar", callback_data="page_country_0")])
+    buttons.append([InlineKeyboardButton(
+        s.TOP10_ALL_BTN.get(lang, s.TOP10_ALL_BTN["uz"]),
+        callback_data="page_country_0"
+    )])
 
     await update.message.reply_text(
-        "🔝 <b>Eng arzon 10 ta davlat</b>\n\nQuyidagilardan birini tanlang:",
+        s.TOP10_TITLE.get(lang, s.TOP10_TITLE["uz"]),
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup(buttons)
     )
@@ -157,6 +161,7 @@ async def select_country_callback(update: Update, context: ContextTypes.DEFAULT_
     country_code = query.data.replace("select_country_", "")
 
     user_id = query.from_user.id
+    lang = await _get_lang(user_id)
     user_data = await db.get_user(user_id)
 
     async with aiosqlite.connect(DB_PATH) as dbase:
@@ -167,7 +172,7 @@ async def select_country_callback(update: Update, context: ContextTypes.DEFAULT_
             row = await cur.fetchone()
 
     if not row:
-        await query.answer("❌ Bu davlat hozir mavjud emas.", show_alert=True)
+        await query.answer(s.COUNTRY_UNAVAILABLE.get(lang, s.COUNTRY_UNAVAILABLE["uz"]), show_alert=True)
         return
 
     price = float(row[0])
@@ -178,26 +183,25 @@ async def select_country_callback(update: Update, context: ContextTypes.DEFAULT_
     context.user_data["pending_price"] = price
     context.user_data["pending_country_name"] = country_name
 
-    text = (
-        f"🌍 <b>Tanlangan davlat:</b> {country_name}\n"
-        f"💵 <b>Narxi:</b> {int(price):,} so'm\n"
-        f"💰 <b>Balansingiz:</b> {int(balance):,} so'm\n\n"
-    )
-
     if balance >= price:
-        text += "✅ Balansingiz yetarli. Xaridni tasdiqlaysizmi?"
-        kbd = InlineKeyboardMarkup([[
-            InlineKeyboardButton("✅ Ha, sotib olaman", callback_data="confirm_buy"),
-            InlineKeyboardButton("❌ Bekor qilish", callback_data="cancel_buy"),
-        ]])
-    else:
-        text += (
-            f"❌ <b>Balansingiz yetarli emas!</b>\n"
-            f"Kerakli: {int(price):,} so'm | Yetishmaydi: {int(price - balance):,} so'm\n\n"
-            f"💳 Hisobni to'ldiring!"
+        text = s.CONFIRM_BUY.get(lang, s.CONFIRM_BUY["uz"]).format(
+            country=country_name,
+            price=f"{int(price):,}",
+            balance=f"{int(balance):,}"
         )
         kbd = InlineKeyboardMarkup([[
-            InlineKeyboardButton("❌ Bekor qilish", callback_data="cancel_buy"),
+            InlineKeyboardButton(s.BUY_CONFIRM_BTN.get(lang, s.BUY_CONFIRM_BTN["uz"]), callback_data="confirm_buy"),
+            InlineKeyboardButton(s.BUY_CANCEL_BTN.get(lang, s.BUY_CANCEL_BTN["uz"]), callback_data="cancel_buy"),
+        ]])
+    else:
+        text = s.INSUFFICIENT_BALANCE.get(lang, s.INSUFFICIENT_BALANCE["uz"]).format(
+            country=country_name,
+            price=f"{int(price):,}",
+            balance=f"{int(balance):,}",
+            diff=f"{int(price - balance):,}"
+        )
+        kbd = InlineKeyboardMarkup([[
+            InlineKeyboardButton(s.BUY_CANCEL_BTN.get(lang, s.BUY_CANCEL_BTN["uz"]), callback_data="cancel_buy"),
         ]])
 
     await query.message.edit_text(text, parse_mode="HTML", reply_markup=kbd)
@@ -206,13 +210,15 @@ async def select_country_callback(update: Update, context: ContextTypes.DEFAULT_
 async def cancel_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    user_id = query.from_user.id
+    lang = await _get_lang(user_id)
     context.user_data.pop("pending_country", None)
     context.user_data.pop("pending_price", None)
     context.user_data.pop("pending_country_name", None)
     await query.message.delete()
     await query.message.chat.send_message(
-        "❌ Bekor qilindi.",
-        reply_markup=main_menu_keyboard(await is_admin(query.from_user.id))
+        s.BUY_CANCELLED.get(lang, s.BUY_CANCELLED["uz"]),
+        reply_markup=main_menu_keyboard(await is_admin(user_id), lang)
     )
 
 
@@ -221,6 +227,7 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     await query.answer()
 
     user_id = query.from_user.id
+    lang = await _get_lang(user_id)
     user_data = await db.get_user(user_id)
 
     country_code = context.user_data.pop("pending_country", None)
@@ -228,25 +235,21 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     country_name = context.user_data.pop("pending_country_name", None)
 
     if not country_code or not price:
-        await query.message.edit_text("❌ Xatolik. Qaytadan urinib ko'ring.")
+        await query.message.edit_text(s.PURCHASE_ERROR.get(lang, s.PURCHASE_ERROR["uz"]))
         return
 
-    # Atomic balance deduction
     if not await db.decrease_balance(user_id, price):
-        await query.answer("❌ Balansingiz yetarli emas!", show_alert=True)
+        await query.answer(s.BALANCE_INSUFFICIENT_ALERT.get(lang, s.BALANCE_INSUFFICIENT_ALERT["uz"]), show_alert=True)
         return
 
-    await query.message.edit_text("⏳ Raqam sotib olinmoqda, iltimos kuting...")
+    await query.message.edit_text(s.BUYING_LOADING.get(lang, s.BUYING_LOADING["uz"]))
 
     result = await spider.get_number(country_code)
 
     if not result:
-        # Refund on failure
         await db.update_balance(user_id, price)
         await query.message.edit_text(
-            f"❌ <b>Bu davlat uchun raqam topilmadi!</b>\n"
-            f"Boshqa davlatni tanlang yoki keyinroq urinib ko'ring.\n"
-            f"(Pulingiz hisobingizga qaytarildi)",
+            s.NO_NUMBER_FOUND.get(lang, s.NO_NUMBER_FOUND["uz"]),
             parse_mode="HTML"
         )
         return
@@ -254,7 +257,6 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     number = result["number"]
     hash_code = result["hash_code"]
 
-    # Asl narxni olamiz
     original_price = 0.0
     async with aiosqlite.connect(DB_PATH) as dbase:
         async with dbase.execute(
@@ -266,13 +268,8 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
                 original_price = float(row_orig[0])
 
     purchase_id = await db.create_purchase(
-        user_id=user_id,
-        country=country_code,
-        country_name=country_name,
-        number=number,
-        hash_code=hash_code,
-        price=price,
-        original_price=original_price
+        user_id=user_id, country=country_code, country_name=country_name,
+        number=number, hash_code=hash_code, price=price, original_price=original_price
     )
 
     from config import LOG_CHANNEL
@@ -289,64 +286,61 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         except Exception:
             pass
 
-
     u_record = await db.get_user(user_id)
     new_balance = u_record["balance"] if u_record else 0
 
     kbd = InlineKeyboardMarkup([[
-        InlineKeyboardButton("📨 SMS Kodni olish", callback_data=f"get_code_{purchase_id}")
+        InlineKeyboardButton(s.GET_CODE_BTN.get(lang, s.GET_CODE_BTN["uz"]), callback_data=f"get_code_{purchase_id}")
     ]])
 
-    await query.message.edit_text(
-        f"✅ <b>Raqam muvaffaqiyatli sotib olindi!</b>\n\n"
-        f"🌍 Davlat: {country_name}\n"
-        f"📱 Raqam: <code>{number}</code>\n"
-        f"💵 Narxi: {int(price):,} so'm\n"
-        f"💰 Qolgan balans: {int(new_balance):,} so'm\n\n"
-        f"⚠️ <b>DIQQAT:</b> Raqamni rasmiy Telegram ilovasida UMUMAN ishlatmang! Aks holda darhol bloklanadi.\n"
-        f"👉 Faqat norasmiy ilovalardan (Telegram X, Plus Messenger, Nicegram va h.k.) foydalaning.\n\n"
-        f"📨 SMS kodni olish uchun tugmani bosing.",
-        parse_mode="HTML",
-        reply_markup=kbd
+    text = s.BUY_SUCCESS.get(lang, s.BUY_SUCCESS["uz"]).format(
+        country=country_name,
+        number=number,
+        price=f"{int(price):,}",
+        balance=f"{int(new_balance):,}"
     )
+    await query.message.edit_text(text, parse_mode="HTML", reply_markup=kbd)
 
 
 async def get_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer("⏳ Kod tekshirilmoqda...")
+    user_id = query.from_user.id
+    lang = await _get_lang(user_id)
+    await query.answer("⏳")
 
     purchase_id = int(query.data.replace("get_code_", ""))
     purchase = await db.get_purchase(purchase_id)
 
     if not purchase:
-        await query.answer("❌ Xarid topilmadi.", show_alert=True)
+        await query.answer(s.PURCHASE_NOT_FOUND.get(lang, s.PURCHASE_NOT_FOUND["uz"]), show_alert=True)
         return
 
     if purchase["status"] == "completed" and purchase["code"]:
-        await query.message.edit_text(
-            f"✅ <b>SMS Kod:</b>\n\n"
-            f"🌍 Davlat: {purchase['country_name']}\n"
-            f"📱 Raqam: <code>{purchase['number']}</code>\n"
-            f"💬 <b>Kod: <code>{purchase['code']}</code></b>\n"
-            f"🔑 Parol: <code>{purchase['password'] or 'Mavjud emas'}</code>",
-            parse_mode="HTML"
+        password_val = purchase['password'] or ('Mavjud emas' if lang == 'uz' else ('Not available' if lang == 'en' else 'Нет'))
+        text = s.CODE_ALREADY.get(lang, s.CODE_ALREADY["uz"]).format(
+            country=purchase['country_name'],
+            number=purchase['number'],
+            code=purchase['code'],
+            password=password_val
         )
+        await query.message.edit_text(text, parse_mode="HTML")
         return
 
     result = await spider.get_code(purchase["hash_code"])
 
     if not result or not result.get("code"):
         kbd = InlineKeyboardMarkup([[
-            InlineKeyboardButton("🔄 Qayta tekshirish", callback_data=f"get_code_{purchase_id}")
+            InlineKeyboardButton(s.RETRY_BTN.get(lang, s.RETRY_BTN["uz"]), callback_data=f"get_code_{purchase_id}")
         ]])
         from datetime import datetime
         now_str = datetime.now().strftime("%H:%M:%S")
         try:
             await query.message.edit_text(
-                f"🌍 Davlat: {purchase['country_name']}\n"
-                f"📱 Raqam: <code>{purchase['number']}</code>\n\n"
-                f"⏳ <b>SMS kod hali kelmadi.</b> ({now_str})\n"
-                "Biroz kuting va qayta tekshiring (1–3 daqiqa).",
+                s.CODE_WAITING.get(lang, s.CODE_WAITING["uz"]).format(
+                    country=purchase['country_name'],
+                    number=purchase['number'],
+                    time=now_str
+                ),
                 parse_mode="HTML",
                 reply_markup=kbd
             )
@@ -359,14 +353,12 @@ async def get_code_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await db.set_purchase_code(purchase_id, code, password)
 
-    await query.message.edit_text(
-        f"✅ <b>SMS Kod keldi!</b>\n\n"
-        f"🌍 Davlat: {purchase['country_name']}\n"
-        f"📱 Raqam: <code>{purchase['number']}</code>\n"
-        f"💵 Narxi: {int(purchase['price']):,} so'm\n"
-        f"💬 <b>Kod: <code>{code}</code></b>\n"
-        f"🔑 Parol: <code>{password or 'Mavjud emas'}</code>\n\n"
-        f"⚠️ <b>DIQQAT:</b> Raqamni rasmiy Telegram ilovasida UMUMAN faollashtirmang (bloklanadi)!\n"
-        f"👉 Faqat norasmiy ilovalardan (Telegram X, Plus Messenger, Nicegram) foydalaning.",
-        parse_mode="HTML"
+    password_val = password or ('Mavjud emas' if lang == 'uz' else ('Not available' if lang == 'en' else 'Нет'))
+    text = s.CODE_ARRIVED.get(lang, s.CODE_ARRIVED["uz"]).format(
+        country=purchase['country_name'],
+        number=purchase['number'],
+        price=f"{int(purchase['price']):,}",
+        code=code,
+        password=password_val
     )
+    await query.message.edit_text(text, parse_mode="HTML")

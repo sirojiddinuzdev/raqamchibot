@@ -52,6 +52,12 @@ async def init_db():
         except Exception:
             pass
 
+        # Migration: til ustuni
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN lang TEXT DEFAULT 'uz'")
+        except Exception:
+            pass
+
         await db.execute("""
             CREATE TABLE IF NOT EXISTS deposits (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -147,6 +153,28 @@ async def create_user(user_id: int, username: str, full_name: str, referred_by: 
             """INSERT OR IGNORE INTO users (user_id, username, full_name, referred_by)
                VALUES (?, ?, ?, ?)""",
             (user_id, username, full_name, referred_by)
+        )
+        await db.commit()
+
+
+async def get_user_lang(user_id: int) -> str:
+    """Foydalanuvchi tilini qaytaradi, default 'uz'"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            "SELECT lang FROM users WHERE user_id = ?", (user_id,)
+        ) as cur:
+            row = await cur.fetchone()
+            if row and row[0]:
+                return row[0]
+            return "uz"
+
+
+async def set_user_lang(user_id: int, lang: str):
+    """Foydalanuvchi tilini saqlaydi"""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            "UPDATE users SET lang = ? WHERE user_id = ?",
+            (lang, user_id)
         )
         await db.commit()
 
