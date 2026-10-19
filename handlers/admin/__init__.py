@@ -8,10 +8,7 @@ from .admin_users import (
     adm_users_handler,
     adm_add_balance_handler,
     adm_sub_balance_handler,
-    adm_ban_handler,
-    adm_unban_handler,
     prompt_user_id_handler,
-    adm_ban_menu_handler,
     adm_balance_menu_handler,
     adm_users_page_callback,
 )
@@ -36,7 +33,6 @@ from .admin_catalog import (
     adm_set_card_handler
 )
 from .admin_deposits import (
-    adm_pending_deps_handler,
     adm_confirm_dep_callback,
     adm_reject_dep_callback
 )
@@ -62,10 +58,7 @@ __all__ = [
     "adm_users_handler",
     "adm_add_balance_handler",
     "adm_sub_balance_handler",
-    "adm_ban_handler",
-    "adm_unban_handler",
     "prompt_user_id_handler",
-    "adm_ban_menu_handler",
     "adm_balance_menu_handler",
     "adm_users_page_callback",
     "adm_countries_handler",
@@ -84,7 +77,6 @@ __all__ = [
     "adm_remove_channel_callback",
     "adm_del_channel_callback",
     "adm_set_card_handler",
-    "adm_pending_deps_handler",
     "adm_confirm_dep_callback",
     "adm_reject_dep_callback",
     "adm_admins_handler",

@@ -209,15 +209,6 @@ async def set_balance(user_id: int, amount: float):
         await db.commit()
 
 
-async def ban_user(user_id: int, banned: bool = True):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute(
-            "UPDATE users SET is_banned = ? WHERE user_id = ?",
-            (1 if banned else 0, user_id)
-        )
-        await db.commit()
-
-
 async def get_all_users() -> list[dict]:
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
@@ -324,49 +315,6 @@ async def create_deposit(user_id: int, check_file: str) -> int:
         )
         await db.commit()
         return cur.lastrowid
-
-
-async def confirm_deposit(deposit_id: int, amount: float):
-    async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute(
-            "SELECT user_id FROM deposits WHERE id=?", (deposit_id,)
-        ) as cur:
-            row = await cur.fetchone()
-        if row:
-            user_id = row[0]
-            await db.execute(
-                """UPDATE deposits
-                   SET status='confirmed', admin_msg=?, confirmed_at=CURRENT_TIMESTAMP
-                   WHERE id=?""",
-                (str(amount), deposit_id)
-            )
-            await db.execute(
-                "UPDATE users SET balance = balance + ? WHERE user_id = ?",
-                (amount, user_id)
-            )
-            await db.commit()
-            return user_id
-        return None
-
-
-async def get_deposit(deposit_id: int) -> dict | None:
-    async with aiosqlite.connect(DB_PATH) as db:
-        db.row_factory = aiosqlite.Row
-        async with db.execute(
-            "SELECT * FROM deposits WHERE id=?", (deposit_id,)
-        ) as cur:
-            row = await cur.fetchone()
-            return dict(row) if row else None
-
-
-async def get_pending_deposits() -> list[dict]:
-    async with aiosqlite.connect(DB_PATH) as db:
-        db.row_factory = aiosqlite.Row
-        async with db.execute(
-            "SELECT * FROM deposits WHERE status='pending' ORDER BY created_at DESC"
-        ) as cur:
-            rows = await cur.fetchall()
-            return [dict(r) for r in rows]
 
 
 # ─── KANALLAR ─────────────────────────────────────────────────

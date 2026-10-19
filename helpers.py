@@ -76,8 +76,7 @@ def admin_main_keyboard() -> ReplyKeyboardMarkup:
     """Admin asosiy menyusi — O'zbekchada qoladi"""
     return ReplyKeyboardMarkup(
         [
-            ["📊 Statistika", "⏳ Kutayotgan to'lovlar"],
-            ["🚫 BAN ✅", "➖ Balans ➕"],
+            ["📊 Statistika", "➖ Balans ➕"],
             ["📢 Kanallar", "🌍 Davlatlar"],
             ["💳 Karta sozlash", "📨 Ommaviy xabar"],
             ["🎁 Promokodlar", "👮‍♂️ Adminlar"],

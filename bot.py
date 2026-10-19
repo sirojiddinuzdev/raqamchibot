@@ -45,10 +45,7 @@ from handlers.admin import (
     adm_users_handler,
     adm_add_balance_handler,
     adm_sub_balance_handler,
-    adm_ban_handler,
-    adm_unban_handler,
     prompt_user_id_handler,
-    adm_ban_menu_handler,
     adm_balance_menu_handler,
     adm_users_page_callback,
     adm_channels_handler,
@@ -70,7 +67,6 @@ from handlers.admin import (
     adm_firstpage_clear_callback,
     adm_set_card_handler,
     adm_broadcast_handler,
-    adm_pending_deps_handler,
     adm_confirm_dep_callback,
     adm_reject_dep_callback,
     adm_admins_handler,
@@ -302,17 +298,15 @@ def main():
     # ── Reply Keyboard matnlari (Admin) ──
     app.add_handler(MessageHandler(filters.Regex("^📊 Statistika$"), adm_stats_handler))
     app.add_handler(MessageHandler(filters.Regex("^👥 Foydalanuvchilar$"), adm_users_handler))
-    app.add_handler(MessageHandler(filters.Regex("^🚫 BAN ✅$"), adm_ban_menu_handler))
     app.add_handler(MessageHandler(filters.Regex("^➖ Balans ➕$"), adm_balance_menu_handler))
     app.add_handler(MessageHandler(
-        filters.Regex("^(💸 Balans qo'shish|💸 Balans ayirish|🚫 Ban qo'yish|✅ Banni ochish)$"), 
+        filters.Regex("^(💸 Balans qo'shish|💸 Balans ayirish)$"),
         prompt_user_id_handler
     ))
     app.add_handler(MessageHandler(filters.Regex("^📢 Kanallar$"), adm_channels_handler))
     app.add_handler(MessageHandler(filters.Regex("^🌍 Davlatlar$"), adm_countries_handler))
     app.add_handler(MessageHandler(filters.Regex("^💳 Karta sozlash$"), adm_set_card_handler))
     app.add_handler(MessageHandler(filters.Regex("^📨 Ommaviy xabar$"), adm_broadcast_handler))
-    app.add_handler(MessageHandler(filters.Regex("^⏳ Kutayotgan to'lovlar$"), adm_pending_deps_handler))
     app.add_handler(MessageHandler(filters.Regex("^👮‍♂️ Adminlar$"), adm_admins_handler))
     app.add_handler(MessageHandler(filters.Regex("^💾 Zahira nusxa$"), adm_backup_handler))
     app.add_handler(MessageHandler(filters.Regex("^🎁 Promokodlar$"), adm_promocodes_handler))
@@ -332,9 +326,6 @@ def main():
 
     app.add_handler(CallbackQueryHandler(adm_add_balance_handler, pattern=r"^adm_add_bal_\d+$"))
     app.add_handler(CallbackQueryHandler(adm_sub_balance_handler, pattern=r"^adm_sub_bal_\d+$"))
-    app.add_handler(CallbackQueryHandler(adm_ban_handler, pattern=r"^adm_ban_\d+$"))
-    app.add_handler(CallbackQueryHandler(adm_unban_handler, pattern=r"^adm_unban_\d+$"))
-
     app.add_handler(CallbackQueryHandler(adm_add_channel_callback, pattern="^adm_add_channel$"))
     app.add_handler(CallbackQueryHandler(adm_remove_channel_callback, pattern="^adm_remove_channel$"))
     app.add_handler(CallbackQueryHandler(adm_del_channel_callback, pattern=r"^adm_del_ch_"))

@@ -66,9 +66,7 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 from telegram import InlineKeyboardMarkup, InlineKeyboardButton
                 kbd = InlineKeyboardMarkup([
                     [InlineKeyboardButton("➕ Balans qo'shish", callback_data=f"adm_add_bal_{uid}"),
-                     InlineKeyboardButton("➖ Balans ayirish", callback_data=f"adm_sub_bal_{uid}")],
-                    [InlineKeyboardButton("🚫 Ban qilish", callback_data=f"adm_ban_{uid}"),
-                     InlineKeyboardButton("✅ Bandan yechish", callback_data=f"adm_unban_{uid}")]
+                     InlineKeyboardButton("➖ Balans ayirish", callback_data=f"adm_sub_bal_{uid}")]
                 ])
                 await update.message.reply_text(msg, parse_mode="HTML", reply_markup=kbd)
             else:
