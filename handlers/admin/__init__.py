@@ -34,6 +34,7 @@ from .admin_catalog import (
 )
 from .admin_deposits import (
     adm_confirm_dep_callback,
+    adm_auto_confirm_dep_callback,
     adm_reject_dep_callback
 )
 from .admin_admins import (
@@ -78,6 +79,7 @@ __all__ = [
     "adm_del_channel_callback",
     "adm_set_card_handler",
     "adm_confirm_dep_callback",
+    "adm_auto_confirm_dep_callback",
     "adm_reject_dep_callback",
     "adm_admins_handler",
     "adm_add_admin_callback",

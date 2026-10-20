@@ -69,6 +69,7 @@ from handlers.admin import (
     adm_set_card_handler,
     adm_broadcast_handler,
     adm_confirm_dep_callback,
+    adm_auto_confirm_dep_callback,
     adm_reject_dep_callback,
     adm_admins_handler,
     adm_add_admin_callback,
@@ -341,6 +342,7 @@ def main():
     app.add_handler(CallbackQueryHandler(adm_firstpage_toggle_callback, pattern=r"^adm_firstpage_toggle_"))
     app.add_handler(CallbackQueryHandler(adm_firstpage_clear_callback, pattern=r"^adm_firstpage_clear$"))
     app.add_handler(CallbackQueryHandler(adm_confirm_dep_callback, pattern=r"^confirm_dep_"))
+    app.add_handler(CallbackQueryHandler(adm_auto_confirm_dep_callback, pattern=r"^auto_confirm_dep_"))
     app.add_handler(CallbackQueryHandler(adm_reject_dep_callback, pattern=r"^reject_dep_"))
     app.add_handler(CallbackQueryHandler(adm_add_admin_callback, pattern="^adm_add_admin$"))
     app.add_handler(CallbackQueryHandler(adm_remove_admin_callback, pattern="^adm_remove_admin$"))

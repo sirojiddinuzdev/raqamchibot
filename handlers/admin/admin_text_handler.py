@@ -119,6 +119,15 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                             )
                         except Exception:
                             pass
+                    for admin_id, msg_id in context.bot_data["deposits"][dep_id].get("amount_prompt_msgs", []):
+                        try:
+                            await context.bot.edit_message_reply_markup(
+                                chat_id=admin_id,
+                                message_id=msg_id,
+                                reply_markup=None,
+                            )
+                        except Exception:
+                            pass
                     del context.bot_data["deposits"][dep_id]
 
         except ValueError:
