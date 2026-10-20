@@ -16,7 +16,6 @@ jobs:
       BOT_TOKEN: "ci-placeholder"
       ADMIN_IDS: "1"
       SPIDER_API_KEY: "ci-placeholder"
-      RAILWAY_VOLUME_MOUNT_PATH: ${{ runner.temp }}/raqamchi-ci
 
     steps:
       - name: Check out repository
@@ -39,6 +38,8 @@ jobs:
         run: python -c "import bot"
 
       - name: Initialize database
+        env:
+          RAILWAY_VOLUME_MOUNT_PATH: ${{ runner.temp }}/raqamchi-ci
         run: |
           mkdir -p "$RAILWAY_VOLUME_MOUNT_PATH"
           python -c "import asyncio, database; asyncio.run(database.init_db())"
