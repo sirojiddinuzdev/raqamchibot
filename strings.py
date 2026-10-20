@@ -159,6 +159,12 @@ START_TOPUP_BTN = {
     "ru": "💳 Пополнить баланс",
 }
 
+MAIN_MENU_PROMPT = {
+    "uz": "👇 Kerakli bo'limni tanlang:",
+    "en": "👇 Choose an option from the menu:",
+    "ru": "👇 Выберите нужный раздел в меню:",
+}
+
 # ----- BALANCE -----
 
 BALANCE_TEXT = {

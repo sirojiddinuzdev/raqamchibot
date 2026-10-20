@@ -95,6 +95,10 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="HTML",
         reply_markup=keyboard,
     )
+    await update.message.reply_text(
+        s.MAIN_MENU_PROMPT.get(lang, s.MAIN_MENU_PROMPT["uz"]),
+        reply_markup=main_menu_keyboard(await is_admin(user_id), lang),
+    )
 
 
 async def set_lang_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
