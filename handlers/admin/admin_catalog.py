@@ -96,6 +96,44 @@ async def adm_back_to_catalog_callback(update: Update, context: ContextTypes.DEF
     await adm_countries_handler(update, context)
 
 
+async def _get_country_add_items(context: ContextTypes.DEFAULT_TYPE) -> list[tuple[str, str]]:
+    api_countries = context.user_data.get("api_countries", {})
+    async with aiosqlite.connect(DB_PATH) as dbase:
+        async with dbase.execute(
+            "SELECT key FROM settings WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"
+        ) as cur:
+            sold_codes = {
+                key.removeprefix("country_") for (key,) in await cur.fetchall()
+            }
+
+    countries = []
+    for code, price in api_countries.items():
+        name = get_country_name(code)
+        price_uzs = int(float(price) * EXCHANGE_RATE)
+        sold_mark = "✅ " if code in sold_codes else ""
+        countries.append((
+            name.casefold(),
+            f"adm_pick_country_{code}",
+            f"{sold_mark}{name} ({price_uzs:,} so'm)",
+        ))
+
+    countries.sort(key=lambda item: item[0])
+    return [(callback, label) for _, callback, label in countries]
+
+
+async def show_country_add_list(message, context: ContextTypes.DEFAULT_TYPE):
+    items = await _get_country_add_items(context)
+    page = context.user_data.get("adm_clist_page", 0)
+    keyboard = paginated_keyboard(
+        items, page, per_page=15, prefix="adm_clist", back_callback="adm_back_to_catalog"
+    )
+    await message.reply_text(
+        "🌍 <b>Qo'shish uchun davlatni tanlang:</b>\n✅ — davlat sotuvda mavjud",
+        parse_mode="HTML",
+        reply_markup=keyboard,
+    )
+
+
 async def _show_first_page_countries(query, context: ContextTypes.DEFAULT_TYPE, page: int = 0):
     async with aiosqlite.connect(DB_PATH) as dbase:
         async with dbase.execute(
@@ -222,18 +260,10 @@ async def adm_add_country_list_callback(update: Update, context: ContextTypes.DE
 
     context.user_data["api_countries"] = api_countries
     context.user_data["adm_clist_page"] = 0
-
-    items = []
-    for code, price in api_countries.items():
-        name = get_country_name(code)
-        price_uzs = int(float(price) * EXCHANGE_RATE)
-        items.append((f"adm_pick_country_{code}", f"{name} ({price_uzs:,} so'm)"))
-
-    items.sort(key=lambda x: x[1])
-
+    items = await _get_country_add_items(context)
     kbd = paginated_keyboard(items, 0, per_page=15, prefix="adm_clist", back_callback="adm_back_to_catalog")
     await query.message.edit_text(
-        "🌍 <b>Qo'shish uchun davlatni tanlang:</b>",
+        "🌍 <b>Qo'shish uchun davlatni tanlang:</b>\n✅ — davlat sotuvda mavjud",
         parse_mode="HTML",
         reply_markup=kbd
     )
@@ -245,14 +275,7 @@ async def adm_clist_page_callback(update: Update, context: ContextTypes.DEFAULT_
     page = int(query.data.split("_")[-1])
     context.user_data["adm_clist_page"] = page
 
-    api_countries = context.user_data.get("api_countries", {})
-    items = []
-    for code, price in api_countries.items():
-        name = get_country_name(code)
-        price_uzs = int(float(price) * EXCHANGE_RATE)
-        items.append((f"adm_pick_country_{code}", f"{name} ({price_uzs:,} so'm)"))
-
-    items.sort(key=lambda x: x[1])
+    items = await _get_country_add_items(context)
 
     kbd = paginated_keyboard(items, page, per_page=15, prefix="adm_clist", back_callback="adm_back_to_catalog")
     try:
@@ -263,10 +286,14 @@ async def adm_clist_page_callback(update: Update, context: ContextTypes.DEFAULT_
 
 async def adm_pick_country_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
     code = query.data.replace("adm_pick_country_", "")
     name = get_country_name(code)
 
+    if await db.get_setting(f"country_{code}") is not None:
+        await query.answer(f"{name} allaqachon sotuvda.", show_alert=True)
+        return
+
+    await query.answer()
     context.user_data["adm_action"] = "set_country_price"
     context.user_data["target_country"] = code
     context.user_data["target_country_name"] = name

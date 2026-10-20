@@ -196,6 +196,8 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             price = int(clean_text)
             c_code = context.user_data.get("target_country")
             c_name = context.user_data.get("target_country_name")
+            if not c_code or not c_name:
+                raise ValueError("Tanlangan davlat topilmadi")
             await db.set_setting(f"country_{c_code}", str(price))
             
             # Asl narxni ham saqlab qo'yamiz (keyinchalik foyda hisoblash uchun)
@@ -209,16 +211,14 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await update.message.reply_text(
                 f"✅ <b>{c_name}</b> davlati {price:,} so'm narxda sotuvga qo'shildi.",
                 parse_mode="HTML",
-                reply_markup=admin_main_keyboard()
             )
             
             context.user_data.pop("adm_action", None)
             context.user_data.pop("target_country", None)
             context.user_data.pop("target_country_name", None)
             
-            # Orqaga asosi menyuga emas, davlatlar ro'yxatiga qaytaramiz
-            from handlers.admin.admin_catalog import adm_countries_handler
-            await adm_countries_handler(update, context, preserve_page=True)
+            from handlers.admin.admin_catalog import show_country_add_list
+            await show_country_add_list(update.message, context)
             
         except ValueError:
             await update.message.reply_text("❌ Noto'g'ri narx kiritildi.", reply_markup=admin_main_keyboard())
