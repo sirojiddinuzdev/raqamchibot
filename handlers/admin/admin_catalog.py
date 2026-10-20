@@ -309,9 +309,18 @@ async def adm_pick_country_callback(update: Update, context: ContextTypes.DEFAUL
     else:
         api_price_uzs = "Noma'lum"
 
+    current_sale_price = ""
+    if context.user_data.get("country_selection_mode") == "edit":
+        sale_price = await db.get_setting(f"country_{code}")
+        if sale_price is not None:
+            current_sale_price = (
+                f"Amaldagi sotuv narxi: <b>{int(float(sale_price)):,} so'm</b>\n"
+            )
+
     await query.message.delete()
     await query.message.chat.send_message(
         f"🌍 Siz <b>{name}</b> ({code}) ni tanladingiz.\n"
+        f"{current_sale_price}"
         f"Asl narxi (API dagi): <b>{api_price_uzs}</b>\n\n"
         f"Sotish narxini so'mda kiriting (masalan: 15000):",
         parse_mode="HTML",
