@@ -27,6 +27,10 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             context.user_data.pop("target_country", None)
             context.user_data.pop("target_country_name", None)
             context.user_data.pop("country_selection_mode", None)
+            await update.message.reply_text(
+                "Bekor qilindi.",
+                reply_markup=admin_main_keyboard(),
+            )
             from handlers.admin.admin_catalog import adm_countries_handler
             await adm_countries_handler(update, context, preserve_page=True)
             return
@@ -218,6 +222,7 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await update.message.reply_text(
                 success_text,
                 parse_mode="HTML",
+                reply_markup=admin_main_keyboard() if selection_mode == "edit" else None,
             )
             
             context.user_data.pop("adm_action", None)
@@ -225,6 +230,7 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             context.user_data.pop("target_country_name", None)
 
             if selection_mode == "edit":
+                context.user_data.pop("country_selection_mode", None)
                 from handlers.admin.admin_catalog import adm_countries_handler
                 await adm_countries_handler(update, context, preserve_page=True)
             else:
@@ -232,10 +238,10 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 await show_country_add_list(update.message, context)
             
         except ValueError:
-            await update.message.reply_text("❌ Noto'g'ri narx kiritildi.", reply_markup=admin_main_keyboard())
-            context.user_data.pop("adm_action", None)
-            context.user_data.pop("target_country", None)
-            context.user_data.pop("target_country_name", None)
+            await update.message.reply_text(
+                "❌ Noto'g'ri narx kiritildi. Qaytadan kiriting:",
+                reply_markup=cancel_keyboard(),
+            )
 
     elif action == "add_promo":
         try:
