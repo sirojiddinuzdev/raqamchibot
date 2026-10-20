@@ -67,6 +67,11 @@ jobs:
           printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/ec2_deploy
           printf '%s\n' "$EC2_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/ec2_deploy ~/.ssh/known_hosts
+          if ! ssh-keygen -F "$EC2_HOST" -f ~/.ssh/known_hosts >/dev/null; then
+            echo "EC2_KNOWN_HOSTS has no host key entry matching EC2_HOST."
+            echo "Add the verified EC2 host key using the exact hostname or IP configured in EC2_HOST."
+            exit 1
+          fi
 
       - name: Deploy to EC2
         run: |

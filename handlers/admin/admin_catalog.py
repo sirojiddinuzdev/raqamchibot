@@ -251,6 +251,7 @@ async def adm_add_country_list_callback(update: Update, context: ContextTypes.DE
     query = update.callback_query
     await query.answer()
 
+    context.user_data["country_selection_mode"] = "add"
     await query.message.edit_text("⏳ API dan davlatlar olinmoqda...")
     api_countries = await spider.get_countries()
 
@@ -272,6 +273,7 @@ async def adm_add_country_list_callback(update: Update, context: ContextTypes.DE
 async def adm_clist_page_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    context.user_data["country_selection_mode"] = "add"
     page = int(query.data.split("_")[-1])
     context.user_data["adm_clist_page"] = page
 
@@ -289,7 +291,10 @@ async def adm_pick_country_callback(update: Update, context: ContextTypes.DEFAUL
     code = query.data.replace("adm_pick_country_", "")
     name = get_country_name(code)
 
-    if await db.get_setting(f"country_{code}") is not None:
+    if (
+        context.user_data.get("country_selection_mode") != "edit"
+        and await db.get_setting(f"country_{code}") is not None
+    ):
         await query.answer(f"{name} allaqachon sotuvda.", show_alert=True)
         return
 
@@ -316,6 +321,7 @@ async def adm_pick_country_callback(update: Update, context: ContextTypes.DEFAUL
 async def adm_edit_country_list_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
+    context.user_data["country_selection_mode"] = "edit"
 
     page = 0
     if query.data.startswith("page_adm_edit_"):
