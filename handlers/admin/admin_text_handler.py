@@ -27,7 +27,7 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             context.user_data.pop("target_country", None)
             context.user_data.pop("target_country_name", None)
             from handlers.admin.admin_catalog import adm_countries_handler
-            await adm_countries_handler(update, context)
+            await adm_countries_handler(update, context, preserve_page=True)
             return
             
         context.user_data.pop("adm_action", None)
@@ -218,7 +218,7 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             
             # Orqaga asosi menyuga emas, davlatlar ro'yxatiga qaytaramiz
             from handlers.admin.admin_catalog import adm_countries_handler
-            await adm_countries_handler(update, context)
+            await adm_countries_handler(update, context, preserve_page=True)
             
         except ValueError:
             await update.message.reply_text("❌ Noto'g'ri narx kiritildi.", reply_markup=admin_main_keyboard())

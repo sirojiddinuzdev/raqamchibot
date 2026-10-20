@@ -13,7 +13,11 @@ from handlers.admin.admin_core import is_admin
 spider = SpiderAPI(SPIDER_API_KEY)
 
 
-async def adm_countries_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def adm_countries_handler(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    preserve_page: bool = False,
+):
     """🌍 Davlatlar tugmasi (Admin panel)"""
     user_id = update.effective_user.id
     if not await is_admin(user_id):
@@ -28,7 +32,7 @@ async def adm_countries_handler(update: Update, context: ContextTypes.DEFAULT_TY
 
     api_countries = await spider.get_countries()
 
-    if not update.callback_query:
+    if not update.callback_query and not preserve_page:
         context.user_data["adm_country_page"] = 0
         
     page = context.user_data.get("adm_country_page", 0)
