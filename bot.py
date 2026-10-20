@@ -37,6 +37,7 @@ from handlers.user import (
     confirm_buy_callback,
     get_code_callback,
     cancel_deposit_callback,
+    start_deposit_callback,
 )
 from handlers.user.user_promocode import user_promo_handler
 from handlers.admin import (
@@ -322,6 +323,7 @@ def main():
     app.add_handler(CallbackQueryHandler(confirm_buy_callback, pattern="^confirm_buy$"))
     app.add_handler(CallbackQueryHandler(get_code_callback, pattern=r"^get_code_"))
     app.add_handler(CallbackQueryHandler(cancel_deposit_callback, pattern="^cancel_deposit$"))
+    app.add_handler(CallbackQueryHandler(start_deposit_callback, pattern="^start_deposit$"))
     app.add_handler(CallbackQueryHandler(adm_users_page_callback, pattern=r"^adm_users_page_\d+$"))
 
     app.add_handler(CallbackQueryHandler(adm_add_balance_handler, pattern=r"^adm_add_bal_\d+$"))

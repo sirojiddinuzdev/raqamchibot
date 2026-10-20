@@ -20,7 +20,8 @@ from .user_purchase import (
 from .user_deposit import (
     deposit_handler,
     deposit_check_handler,
-    cancel_deposit_callback
+    cancel_deposit_callback,
+    start_deposit_callback,
 )
 
 __all__ = [
@@ -42,4 +43,5 @@ __all__ = [
     "deposit_handler",
     "deposit_check_handler",
     "cancel_deposit_callback",
+    "start_deposit_callback",
 ]

@@ -153,6 +153,12 @@ MAIN_MENU_TEXT = {
     "ru": "🏠 <b>Главное меню</b>\n\n💰 <b>Баланс:</b> {balance} сум\n🆔 <b>ID:</b> <code>{user_id}</code>",
 }
 
+START_TOPUP_BTN = {
+    "uz": "💳 Balansni to'ldirish",
+    "en": "💳 Top up balance",
+    "ru": "💳 Пополнить баланс",
+}
+
 # ----- BALANCE -----
 
 BALANCE_TEXT = {

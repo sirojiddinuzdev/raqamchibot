@@ -196,6 +196,7 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             price = int(clean_text)
             c_code = context.user_data.get("target_country")
             c_name = context.user_data.get("target_country_name")
+            selection_mode = context.user_data.get("country_selection_mode", "add")
             if not c_code or not c_name:
                 raise ValueError("Tanlangan davlat topilmadi")
             await db.set_setting(f"country_{c_code}", str(price))
@@ -207,18 +208,27 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 from config import EXCHANGE_RATE
                 api_price_uzs = int(float(api_price) * EXCHANGE_RATE)
                 await db.set_setting(f"country_{c_code}_original", str(api_price_uzs))
-                
+
+            success_text = (
+                f"✅ <b>{c_name}</b> davlatining narxi {price:,} so'mga tahrirlandi."
+                if selection_mode == "edit"
+                else f"✅ <b>{c_name}</b> davlati {price:,} so'm narxda sotuvga qo'shildi."
+            )
             await update.message.reply_text(
-                f"✅ <b>{c_name}</b> davlati {price:,} so'm narxda sotuvga qo'shildi.",
+                success_text,
                 parse_mode="HTML",
             )
             
             context.user_data.pop("adm_action", None)
             context.user_data.pop("target_country", None)
             context.user_data.pop("target_country_name", None)
-            
-            from handlers.admin.admin_catalog import show_country_add_list
-            await show_country_add_list(update.message, context)
+
+            if selection_mode == "edit":
+                from handlers.admin.admin_catalog import adm_countries_handler
+                await adm_countries_handler(update, context, preserve_page=True)
+            else:
+                from handlers.admin.admin_catalog import show_country_add_list
+                await show_country_add_list(update.message, context)
             
         except ValueError:
             await update.message.reply_text("❌ Noto'g'ri narx kiritildi.", reply_markup=admin_main_keyboard())

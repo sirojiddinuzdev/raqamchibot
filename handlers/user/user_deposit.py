@@ -10,19 +10,30 @@ import strings as s
 
 async def deposit_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Hisobni to'ldirish tugmasi"""
+    await _request_deposit_amount(update, context)
+
+
+async def start_deposit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    await _request_deposit_amount(update, context)
+
+
+async def _request_deposit_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await ensure_subscribed(update, context):
         return
 
     user_id = update.effective_user.id
     lang = await _get_lang(user_id)
+    message = update.message or update.callback_query.message
 
     card_number = await db.get_setting("card_number")
     if not card_number:
-        await update.message.reply_text(s.DEPOSIT_NO_CARD.get(lang, s.DEPOSIT_NO_CARD["uz"]))
+        await message.reply_text(s.DEPOSIT_NO_CARD.get(lang, s.DEPOSIT_NO_CARD["uz"]))
         return
 
     context.user_data["awaiting_deposit_amount"] = True
-    await update.message.reply_text(
+    await message.reply_text(
         s.DEPOSIT_ENTER_AMOUNT.get(lang, s.DEPOSIT_ENTER_AMOUNT["uz"]),
         parse_mode="HTML",
         reply_markup=cancel_keyboard(lang)

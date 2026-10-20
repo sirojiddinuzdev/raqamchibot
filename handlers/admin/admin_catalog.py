@@ -338,21 +338,43 @@ async def adm_edit_country_list_callback(update: Update, context: ContextTypes.D
         await query.message.edit_text("❌ Hozircha davlatlar qo'shilmagan.")
         return
 
-    # To show original prices if needed, load api_countries
     api_countries = await spider.get_countries()
     context.user_data["api_countries"] = api_countries
+
+    async with aiosqlite.connect(DB_PATH) as dbase:
+        async with dbase.execute(
+            "SELECT key, value FROM settings WHERE key LIKE 'country_%'"
+        ) as cur:
+            settings_rows = await cur.fetchall()
+
+    country_prices = {}
+    original_prices = {}
+    for key, value in settings_rows:
+        code = key.removeprefix("country_")
+        if code.endswith("_original"):
+            original_prices[code.removesuffix("_original")] = value
+        else:
+            country_prices[code] = value
 
     items = []
     for k in rows:
         code = k[0].replace("country_", "")
         name = get_country_name(code)
-        items.append((f"adm_pick_country_{code}", name))
+        original_price = original_prices.get(code)
+        if original_price is None and api_countries.get(code):
+            original_price = str(int(float(api_countries[code]) * EXCHANGE_RATE))
+        original_label = (
+            f"{int(float(original_price)):,} so'm" if original_price is not None else "Noma'lum"
+        )
+        sale_label = f"{int(float(country_prices[code])):,} so'm"
+        label = f"{name} | Asl: {original_label} | Sotuv: {sale_label}"
+        items.append((f"adm_pick_country_{code}", label))
 
-    from helpers import paginated_keyboard
     kbd = paginated_keyboard(items, page, per_page=14, prefix="adm_edit", back_callback="adm_back_to_catalog")
 
     await query.message.edit_text(
-        "✏️ <b>Narxini tahrirlash uchun davlatni tanlang:</b>",
+        "✏️ <b>Narxini tahrirlash uchun davlatni tanlang:</b>\n"
+        "<i>Asl narx | Sotuv narxi</i>",
         parse_mode="HTML",
         reply_markup=kbd
     )

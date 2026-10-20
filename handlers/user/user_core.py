@@ -66,12 +66,34 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             full_name=user.full_name or "",
             referred_by=ref_id
         )
+        await update.message.reply_text(
+            s.START_CHOOSE_LANG,
+            parse_mode="HTML",
+            reply_markup=lang_select_keyboard()
+        )
+        return
 
-    # Tilni tanlash ekranini chiqarish (barcha yangi/qayta kiruvchi foydalanuvchilar uchun)
+    lang = await _get_lang(user_id)
+    if not await ensure_subscribed(update, context):
+        return
+    if existing["is_banned"]:
+        await update.message.reply_text(s.BANNED.get(lang, s.BANNED["uz"]))
+        return
+
+    text = s.MAIN_MENU_TEXT.get(lang, s.MAIN_MENU_TEXT["uz"]).format(
+        balance=f"{int(existing['balance']):,}",
+        user_id=user_id,
+    )
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton(
+            s.START_TOPUP_BTN.get(lang, s.START_TOPUP_BTN["uz"]),
+            callback_data="start_deposit",
+        )
+    ]])
     await update.message.reply_text(
-        s.START_CHOOSE_LANG,
+        text,
         parse_mode="HTML",
-        reply_markup=lang_select_keyboard()
+        reply_markup=keyboard,
     )
 
 
