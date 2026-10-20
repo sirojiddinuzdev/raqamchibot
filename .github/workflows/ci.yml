@@ -43,3 +43,41 @@ jobs:
         run: |
           mkdir -p "$RAILWAY_VOLUME_MOUNT_PATH"
           python -c "import asyncio, database; asyncio.run(database.init_db())"
+
+  deploy:
+    needs: validate
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_USER: ${{ secrets.EC2_USER }}
+      EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+      EC2_KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+      EC2_DEPLOY_PATH: /home/ubuntu/raqamchibot
+
+    steps:
+      - name: Configure SSH
+        run: |
+          test -n "$EC2_HOST" || { echo "Missing GitHub secret: EC2_HOST"; exit 1; }
+          test -n "$EC2_USER" || { echo "Missing GitHub secret: EC2_USER"; exit 1; }
+          test -n "$EC2_SSH_KEY" || { echo "Missing GitHub secret: EC2_SSH_KEY"; exit 1; }
+          test -n "$EC2_KNOWN_HOSTS" || { echo "Missing GitHub secret: EC2_KNOWN_HOSTS"; exit 1; }
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" > ~/.ssh/ec2_deploy
+          printf '%s\n' "$EC2_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/ec2_deploy ~/.ssh/known_hosts
+
+      - name: Deploy to EC2
+        run: |
+          ssh \
+            -i ~/.ssh/ec2_deploy \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            "$EC2_USER@$EC2_HOST" \
+            "cd '$EC2_DEPLOY_PATH' && \
+             git fetch origin master && \
+             git merge --ff-only FETCH_HEAD && \
+             .venv/bin/pip install -r requirements.txt && \
+             sudo -n systemctl restart raqamchibot.service && \
+             sudo -n systemctl is-active --quiet raqamchibot.service"
