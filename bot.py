@@ -125,11 +125,6 @@ async def universal_text_handler(update: Update, context: ContextTypes.DEFAULT_T
     if await is_admin(user_id):
         adm_action = context.user_data.get("adm_action", "")
         if adm_action:
-            if text == "❌ Bekor qilish":
-                context.user_data.clear()
-                from helpers import admin_main_keyboard
-                await update.message.reply_text("Bekor qilindi.", reply_markup=admin_main_keyboard())
-                return
             from handlers.admin import admin_text_handler
             await admin_text_handler(update, context)
             return

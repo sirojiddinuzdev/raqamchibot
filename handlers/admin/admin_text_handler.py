@@ -26,11 +26,12 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             context.user_data.pop("adm_action", None)
             context.user_data.pop("target_country", None)
             context.user_data.pop("target_country_name", None)
+            context.user_data.pop("country_selection_mode", None)
             from handlers.admin.admin_catalog import adm_countries_handler
             await adm_countries_handler(update, context, preserve_page=True)
             return
             
-        context.user_data.pop("adm_action", None)
+        context.user_data.clear()
         await update.message.reply_text("Bekor qilindi.", reply_markup=admin_main_keyboard())
         return
 
