@@ -7,4 +7,4 @@ async def main():
     c = await spider.get_countries()
     print(c)
 
-asyncio.run(main())    # bu qayta push uchun
+asyncio.run(main())  
