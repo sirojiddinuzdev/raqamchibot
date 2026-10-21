@@ -30,3 +30,6 @@ raqamchi.db-journal
 # OS files
 .DS_Store
 Thumbs.db
+
+# md files
+implementation_plan.md
