@@ -39,6 +39,11 @@ MENU_BALANCE = {
     "en": "💰 My balance",
     "ru": "💰 Мой баланс",
 }
+MENU_HISTORY = {
+    "uz": "📜 Tarix",
+    "en": "📜 History",
+    "ru": "📜 История",
+}
 MENU_CONTACT = {
     "uz": "📞 Admin bilan bog'lanish",
     "en": "📞 Contact admin",
@@ -194,10 +199,15 @@ BALANCE_TEXT = {
           "📅 Дата регистрации: {joined}",
 }
 
-BALANCE_PURCHASES_HEADER = {
-    "uz": "\n\n📋 <b>Oxirgi xaridlaringiz:</b>\n",
-    "en": "\n\n📋 <b>Recent purchases:</b>\n",
-    "ru": "\n\n📋 <b>Последние покупки:</b>\n",
+HISTORY_HEADER = {
+    "uz": "📜 <b>Raqamlar xaridi tarixi:</b>\n\n",
+    "en": "📜 <b>Number purchase history:</b>\n\n",
+    "ru": "📜 <b>История покупки номеров:</b>\n\n",
+}
+HISTORY_EMPTY = {
+    "uz": "📭 Hozircha xaridlar tarixi bo'sh.\n\nHisobingizni to'ldirib, raqam sotib olishingiz mumkin.",
+    "en": "📭 Your purchase history is empty for now.\n\nTop up your balance to buy a number.",
+    "ru": "📭 История покупок пока пуста.\n\nПополните баланс, чтобы купить номер.",
 }
 
 USER_NOT_FOUND = {

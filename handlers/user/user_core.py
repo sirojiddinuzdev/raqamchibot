@@ -213,24 +213,13 @@ async def my_balance_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text(s.USER_NOT_FOUND.get(lang, s.USER_NOT_FOUND["uz"]))
         return
 
-    purchases = await db.get_user_purchases(user_id)
-    purchase_text = ""
-    if purchases:
-        purchase_text = s.BALANCE_PURCHASES_HEADER.get(lang, s.BALANCE_PURCHASES_HEADER["uz"])
-        for p in purchases[:5]:
-            status_icon = "✅" if p["status"] == "completed" else "⏳"
-            purchase_text += (
-                f"{status_icon} {p['country_name']} — "
-                f"<code>{p['number']}</code> — {int(p['price']):,} so'm\n"
-            )
-
     safe_fullname = html.escape(user_data['full_name'])
     text = s.BALANCE_TEXT.get(lang, s.BALANCE_TEXT["uz"]).format(
         name=safe_fullname,
         user_id=user_id,
         balance=f"{int(user_data['balance']):,}",
         joined=user_data['joined_at'][:10]
-    ) + purchase_text
+    )
 
     await update.message.reply_text(
         text, parse_mode="HTML",
@@ -247,6 +236,64 @@ async def my_balance_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             ]
         ]),
     )
+
+
+async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Foydalanuvchining muvaffaqiyatli xarid qilingan raqamlari tarixi"""
+    user_id = update.effective_user.id
+    lang = await _get_lang(user_id)
+    query = update.callback_query
+    if query:
+        await query.answer()
+        page = int(query.data.rsplit("_", 1)[1])
+    else:
+        page = 0
+
+    if not await ensure_subscribed(update, context):
+        return
+
+    completed_purchases = await db.get_user_purchase_history(user_id, offset=page * 10)
+    has_next_page = len(completed_purchases) > 10
+    completed_purchases = completed_purchases[:10]
+    message = update.message or query.message
+
+    if not completed_purchases:
+        await message.reply_text(
+            s.HISTORY_EMPTY.get(lang, s.HISTORY_EMPTY["uz"]),
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton(
+                    s.ACCOUNT_DEPOSIT_BTN.get(lang, s.ACCOUNT_DEPOSIT_BTN["uz"]),
+                    callback_data="start_deposit",
+                )
+            ]]),
+        )
+        return
+
+    history_text = s.HISTORY_HEADER.get(lang, s.HISTORY_HEADER["uz"])
+    for purchase in completed_purchases:
+        bought_at = html.escape(purchase["bought_at"] or "")
+        number = html.escape(purchase["number"] or "")
+        history_text += (
+            f"📅 {bought_at}\n"
+            f"🔢 <code>{number}</code>\n"
+            f"💵 {int(purchase['price']):,} so'm\n\n"
+        )
+
+    page_buttons = []
+    if page > 0:
+        page_buttons.append(InlineKeyboardButton("⬅️", callback_data=f"history_page_{page - 1}"))
+    if has_next_page:
+        page_buttons.append(InlineKeyboardButton("➡️", callback_data=f"history_page_{page + 1}"))
+    keyboard = InlineKeyboardMarkup([page_buttons]) if page_buttons else None
+
+    if query:
+        await message.edit_text(history_text, parse_mode="HTML", reply_markup=keyboard)
+    else:
+        await message.reply_text(
+            history_text,
+            parse_mode="HTML",
+            reply_markup=keyboard,
+        )
 
 
 async def contact_admin_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):

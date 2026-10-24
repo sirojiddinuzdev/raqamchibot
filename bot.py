@@ -27,6 +27,7 @@ from handlers.user import (
     chat_join_request_handler,
     back_to_main_handler,
     my_balance_handler,
+    history_handler,
     contact_admin_handler,
     deposit_handler,
     buy_number_handler,
@@ -283,6 +284,8 @@ def main():
     app.add_handler(MessageHandler(filters.Regex("^💳 (Hisobni to'ldirish|Top up balance|Пополнить баланс)$"), deposit_handler))
     # Hisobim
     app.add_handler(MessageHandler(filters.Regex("^💰 (Hisobim|My balance|Мой баланс)$"), my_balance_handler))
+    # Xaridlar tarixi
+    app.add_handler(MessageHandler(filters.Regex("^📜 (Tarix|History|История)$"), history_handler))
     # Admin bilan bog'lanish
     app.add_handler(MessageHandler(filters.Regex("^📞"), contact_admin_handler))
     # Bosh menyuga
@@ -321,6 +324,7 @@ def main():
     app.add_handler(CallbackQueryHandler(cancel_deposit_callback, pattern="^cancel_deposit$"))
     app.add_handler(CallbackQueryHandler(start_deposit_callback, pattern="^start_deposit$"))
     app.add_handler(CallbackQueryHandler(user_promo_handler, pattern="^start_promo$"))
+    app.add_handler(CallbackQueryHandler(history_handler, pattern=r"^history_page_\d+$"))
     app.add_handler(CallbackQueryHandler(adm_users_page_callback, pattern=r"^adm_users_page_\d+$"))
 
     app.add_handler(CallbackQueryHandler(adm_add_balance_handler, pattern=r"^adm_add_bal_\d+$"))
