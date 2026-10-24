@@ -57,7 +57,6 @@ async def adm_stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     completed_purchases = 0
     total_income = 0.0
     total_original = 0.0
-    top_country = "Yo'q"
 
     import aiosqlite
     from database import DB_PATH
@@ -69,9 +68,15 @@ async def adm_stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             rows = await cur.fetchall()
 
     if rows:
-        top_row = max(rows, key=lambda x: x["c"])
         from countries import get_country_name
-        top_country = get_country_name(top_row["country"])
+        top_countries = sorted(
+            rows,
+            key=lambda row: (-row["c"], row["country"]),
+        )[:3]
+        top_countries_text = "\n".join(
+            f"{index}. {get_country_name(row['country'])} — <b>{row['c']}</b> marta"
+            for index, row in enumerate(top_countries, start=1)
+        )
 
         for r in rows:
             c = r["country"]
@@ -84,6 +89,8 @@ async def adm_stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             orig = await db.get_setting(f"country_{c}_original")
             if orig:
                 total_original += (float(orig) * count)
+    else:
+        top_countries_text = "Yo'q"
 
     profit = total_income - total_original
 
@@ -91,7 +98,7 @@ async def adm_stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📊 <b>Bot Statistikasi</b>\n\n"
         f"👥 Umumiy foydalanuvchilar: <b>{total_users}</b>\n"
         f"✅ Sotilgan raqamlar: <b>{completed_purchases}</b> ta\n"
-        f"👑 Eng ko'p sotilgan davlat: <b>{top_country}</b>\n"
+        f"👑 <b>Eng ko'p sotilgan 3 ta davlat:</b>\n{top_countries_text}\n"
         f"💵 Asl narxi (Tan narxi): <b>{int(total_original):,} so'm</b>\n"
         f"💰 Biz sotgan narx: <b>{int(total_income):,} so'm</b>\n"
         f"📈 Sof foyda: <b>{int(profit):,} so'm</b>"
