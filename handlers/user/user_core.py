@@ -234,7 +234,18 @@ async def my_balance_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     await update.message.reply_text(
         text, parse_mode="HTML",
-        reply_markup=main_menu_keyboard(await is_admin(user_id), lang)
+        reply_markup=InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(
+                    s.ACCOUNT_DEPOSIT_BTN.get(lang, s.ACCOUNT_DEPOSIT_BTN["uz"]),
+                    callback_data="start_deposit",
+                ),
+                InlineKeyboardButton(
+                    s.ACCOUNT_PROMO_BTN.get(lang, s.ACCOUNT_PROMO_BTN["uz"]),
+                    callback_data="start_promo",
+                ),
+            ]
+        ]),
     )
 
 

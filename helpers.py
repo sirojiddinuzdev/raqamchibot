@@ -13,8 +13,7 @@ from telegram.error import TelegramError
 import logging
 import database as db
 from strings import (
-    MENU_BUY, MENU_DEPOSIT, MENU_BALANCE,
-    MENU_CONTACT, MENU_PROMO, MENU_BACK, MENU_CANCEL,
+    MENU_BUY, MENU_BALANCE, MENU_CONTACT, MENU_BACK, MENU_CANCEL,
     MENU_ADMIN, LANG_BTN, LANG_FLAGS, SUB_BTN,
 )
 
@@ -62,8 +61,8 @@ def main_menu_keyboard(is_admin: bool = False, lang: str = "uz") -> ReplyKeyboar
     lang_label = LANG_BTN.get(lang, LANG_BTN["uz"])
     keys = [
         [MENU_BUY.get(lang, MENU_BUY["uz"])],
-        [MENU_DEPOSIT.get(lang, MENU_DEPOSIT["uz"]), MENU_BALANCE.get(lang, MENU_BALANCE["uz"])],
-        [MENU_CONTACT.get(lang, MENU_CONTACT["uz"]), MENU_PROMO.get(lang, MENU_PROMO["uz"])],
+        [MENU_BALANCE.get(lang, MENU_BALANCE["uz"])],
+        [MENU_CONTACT.get(lang, MENU_CONTACT["uz"])],
         [lang_label],
     ]
     if is_admin:

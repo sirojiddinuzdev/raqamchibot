@@ -9,13 +9,16 @@ async def user_promo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     user_id = update.effective_user.id
     lang = await _get_lang(user_id)
     context.user_data["user_action"] = "use_promo"
+    message = update.message or update.callback_query.message
+    if update.callback_query:
+        await update.callback_query.answer()
 
     prompts = {
         "uz": "🎁 <b>Promokodni kiriting:</b>\n\nAgar sizda maxsus promokod bo'lsa, uni yuboring.",
         "en": "🎁 <b>Enter your promo code:</b>\n\nIf you have a promo code, send it here.",
         "ru": "🎁 <b>Введите промокод:</b>\n\nЕсли у вас есть промокод, отправьте его сюда.",
     }
-    await update.message.reply_text(
+    await message.reply_text(
         prompts.get(lang, prompts["uz"]),
         parse_mode="HTML",
         reply_markup=cancel_keyboard(lang)

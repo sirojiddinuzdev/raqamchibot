@@ -49,6 +49,16 @@ MENU_PROMO = {
     "en": "🎁 Promo code",
     "ru": "🎁 Промокод",
 }
+ACCOUNT_DEPOSIT_BTN = {
+    "uz": "💳 Hisobni to'ldirish",
+    "en": "💳 Top up balance",
+    "ru": "💳 Пополнить баланс",
+}
+ACCOUNT_PROMO_BTN = {
+    "uz": "🎁 Promokod kiritish",
+    "en": "🎁 Enter promo code",
+    "ru": "🎁 Ввести промокод",
+}
 MENU_BACK = {
     "uz": "🔙 Bosh menyuga",
     "en": "🔙 Back to menu",
