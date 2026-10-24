@@ -66,12 +66,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             full_name=user.full_name or "",
             referred_by=ref_id
         )
-        await update.message.reply_text(
-            s.START_CHOOSE_LANG,
-            parse_mode="HTML",
-            reply_markup=lang_select_keyboard()
-        )
-        return
+        existing = await db.get_user(user_id)
 
     lang = await _get_lang(user_id)
     if not await ensure_subscribed(update, context):
@@ -80,23 +75,15 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(s.BANNED.get(lang, s.BANNED["uz"]))
         return
 
-    text = s.MAIN_MENU_TEXT.get(lang, s.MAIN_MENU_TEXT["uz"]).format(
+    safe_name = html.escape(user.first_name)
+    text = s.WELCOME.get(lang, s.WELCOME["uz"]).format(
+        name=safe_name,
         balance=f"{int(existing['balance']):,}",
         user_id=user_id,
     )
-    keyboard = InlineKeyboardMarkup([[
-        InlineKeyboardButton(
-            s.START_TOPUP_BTN.get(lang, s.START_TOPUP_BTN["uz"]),
-            callback_data="start_deposit",
-        )
-    ]])
     await update.message.reply_text(
         text,
         parse_mode="HTML",
-        reply_markup=keyboard,
-    )
-    await update.message.reply_text(
-        s.MAIN_MENU_PROMPT.get(lang, s.MAIN_MENU_PROMPT["uz"]),
         reply_markup=main_menu_keyboard(await is_admin(user_id), lang),
     )
 

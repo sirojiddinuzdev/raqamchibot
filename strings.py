@@ -85,11 +85,10 @@ LANG_CHANGED = {
 # ----- WELCOME / START -----
 
 WELCOME = {
-    "uz": "👋 <b>Xush kelibsiz, {name}!</b>\n\n"
-          "🤖 <b>Raqamchi Bot</b> — Telegram akkount raqamlari sotib olish xizmati\n\n"
-          "💰 <b>Hisobingiz:</b> {balance} so'm\n"
-          "🆔 <b>ID:</b> <code>{user_id}</code>\n\n"
-          "👇 Quyidagi menyudan foydalaning:",
+    "uz": "👋 Assalomu alaykum, {name}!\n\n"
+          "🤖 Raqamchi Bot — Telegram uchun turli davlatlarning anonim va virtual akkauntlarini "
+          "tezkor hamda xavfsiz sotib olish xizmati.\n"
+          "Menyudan tilni almashtirishingiz mumkin 🇺🇿🇺🇸🇷🇺:",
     "en": "👋 <b>Welcome, {name}!</b>\n\n"
           "🤖 <b>Raqamchi Bot</b> — Telegram account number purchase service\n\n"
           "💰 <b>Balance:</b> {balance} UZS\n"
