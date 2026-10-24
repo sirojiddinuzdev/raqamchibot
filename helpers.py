@@ -61,10 +61,14 @@ def main_menu_keyboard(is_admin: bool = False, lang: str = "uz") -> ReplyKeyboar
     lang_label = LANG_BTN.get(lang, LANG_BTN["uz"])
     keys = [
         [MENU_BUY.get(lang, MENU_BUY["uz"])],
-        [MENU_BALANCE.get(lang, MENU_BALANCE["uz"])],
-        [MENU_HISTORY.get(lang, MENU_HISTORY["uz"])],
-        [MENU_CONTACT.get(lang, MENU_CONTACT["uz"])],
-        [lang_label],
+        [
+            MENU_BALANCE.get(lang, MENU_BALANCE["uz"]),
+            MENU_HISTORY.get(lang, MENU_HISTORY["uz"]),
+        ],
+        [
+            MENU_CONTACT.get(lang, MENU_CONTACT["uz"]),
+            lang_label,
+        ],
     ]
     if is_admin:
         keys.append([MENU_ADMIN.get(lang, MENU_ADMIN["uz"])])
