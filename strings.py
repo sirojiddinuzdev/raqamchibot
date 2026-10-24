@@ -82,14 +82,11 @@ MENU_ADMIN = {
 
 # ----- START / TIL TANLASH -----
 
-START_CHOOSE_LANG = (
-    "🇺🇿 <b>Xush kelibsiz!</b> Iltimos, tilni tanlang.\n\n"
-    "🇬🇧 <b>Welcome!</b> Please choose your language.\n\n"
-    "🇷🇺 <b>Добро пожаловать!</b> Выберите язык.\n\n"
-    "💡 <i>Tilni keyinchalik asosiy menyudan o'zgartirishingiz mumkin / "
-    "You can change the language later from the main menu / "
-    "Язык можно изменить позже в главном меню.</i>"
-)
+CHOOSE_LANGUAGE = {
+    "uz": "Quyidagi tillardan birini tanlang:",
+    "en": "Please choose one of the following languages:",
+    "ru": "Выберите один из следующих языков:",
+}
 
 LANG_CHANGED = {
     "uz": "✅ Til o'zgartirildi: O'zbekcha",

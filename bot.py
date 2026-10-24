@@ -255,6 +255,8 @@ async def post_init(application: Application):
 
     commands = [
         BotCommand("start", "Botni ishga tushirish"),
+        BotCommand("til", "Tilni o'zgartirish"),
+        BotCommand("admin", "Admin bilan bog'lanish"),
     ]
     await application.bot.set_my_commands(commands)
     logger.info("✅ Bot buyruqlari o'rnatildi")
@@ -272,6 +274,8 @@ def main():
 
     # ── Buyruqlar ──
     app.add_handler(CommandHandler("start", start_handler))
+    app.add_handler(CommandHandler("til", change_lang_handler))
+    app.add_handler(CommandHandler("admin", contact_admin_handler))
     app.add_handler(MessageHandler(filters.Regex("^(👨‍💻 Admin Panel|🔙 Orqaga)$"), admin_command))
 
     # ── Reply Keyboard matnlari (Foydalanuvchi) ──

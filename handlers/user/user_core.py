@@ -4,6 +4,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 import database as db
+from countries import get_country_name
 from helpers import (
     check_user_subscribed,
     build_subscribe_keyboard,
@@ -135,7 +136,7 @@ async def change_lang_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
     user_id = update.effective_user.id
     lang = await _get_lang(user_id)
     await update.message.reply_text(
-        s.START_CHOOSE_LANG,
+        s.CHOOSE_LANGUAGE.get(lang, s.CHOOSE_LANGUAGE["uz"]),
         parse_mode="HTML",
         reply_markup=lang_select_keyboard()
     )
@@ -273,7 +274,9 @@ async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     for purchase in completed_purchases:
         bought_at = html.escape(purchase["bought_at"] or "")
         number = html.escape(purchase["number"] or "")
+        country = html.escape(get_country_name(purchase["country"] or ""))
         history_text += (
+            f"{country}\n"
             f"📅 {bought_at}\n"
             f"🔢 <code>{number}</code>\n"
             f"💵 {int(purchase['price']):,} so'm\n\n"

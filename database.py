@@ -309,7 +309,7 @@ async def get_user_purchase_history(user_id: int, offset: int = 0, limit: int = 
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         async with db.execute(
-            "SELECT * FROM purchases WHERE user_id=? AND status='completed' ORDER BY bought_at DESC LIMIT ? OFFSET ?",
+            "SELECT * FROM purchases WHERE user_id=? AND status='completed' ORDER BY bought_at DESC, id DESC LIMIT ? OFFSET ?",
             (user_id, limit, offset)
         ) as cur:
             rows = await cur.fetchall()
