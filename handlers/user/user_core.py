@@ -229,7 +229,9 @@ async def my_balance_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 InlineKeyboardButton(
                     s.ACCOUNT_DEPOSIT_BTN.get(lang, s.ACCOUNT_DEPOSIT_BTN["uz"]),
                     callback_data="start_deposit",
-                ),
+                )
+            ],
+            [
                 InlineKeyboardButton(
                     s.ACCOUNT_PROMO_BTN.get(lang, s.ACCOUNT_PROMO_BTN["uz"]),
                     callback_data="start_promo",

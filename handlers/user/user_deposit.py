@@ -78,7 +78,7 @@ async def start_deposit_process(update: Update, context: ContextTypes.DEFAULT_TY
     kbd = InlineKeyboardMarkup([
         [InlineKeyboardButton(f"💳 {card_number}", copy_text=CopyTextButton(text=card_number.replace(" ", "")))],
         [InlineKeyboardButton(f"💰 {amount:,}", copy_text=CopyTextButton(text=str(amount)))],
-        [InlineKeyboardButton("❌ Bekor qilish / Cancel / Отмена", callback_data="cancel_deposit")]
+        [InlineKeyboardButton(s.MENU_CANCEL.get(lang, s.MENU_CANCEL["uz"]), callback_data="cancel_deposit")]
     ])
 
     text = s.DEPOSIT_DETAILS.get(lang, s.DEPOSIT_DETAILS["uz"]).format(

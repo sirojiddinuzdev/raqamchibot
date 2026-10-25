@@ -197,9 +197,20 @@ async def select_country_callback(update: Update, context: ContextTypes.DEFAULT_
             balance=f"{int(balance):,}",
             diff=f"{int(price - balance):,}"
         )
-        kbd = InlineKeyboardMarkup([[
-            InlineKeyboardButton(s.BUY_CANCEL_BTN.get(lang, s.BUY_CANCEL_BTN["uz"]), callback_data="cancel_buy"),
-        ]])
+        kbd = InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton(
+                    s.BUY_CANCEL_BTN.get(lang, s.BUY_CANCEL_BTN["uz"]),
+                    callback_data="cancel_buy",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    s.ACCOUNT_DEPOSIT_BTN.get(lang, s.ACCOUNT_DEPOSIT_BTN["uz"]),
+                    callback_data="start_deposit",
+                )
+            ],
+        ])
 
     await query.message.edit_text(text, parse_mode="HTML", reply_markup=kbd)
 
