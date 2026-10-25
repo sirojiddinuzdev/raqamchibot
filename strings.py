@@ -241,18 +241,21 @@ DEPOSIT_DETAILS = {
           "Karta raqami: <code>{card}</code>\n"
           "Qabul qiluvchi: <b>{owner}</b>\n\n"
           "👇 Ushbu kartaga <b>{amount} so'm</b> o'tkazgach, to'lov <b>cheki (skrinshotini)</b> shu yerga yuboring.\n"
+          "🤵 Admin chekni tekshiradi va summani hisobingizga o'tkazadi.\n"
           "⚠️ <i>Sizda to'lovni tasdiqlash uchun 5 daqiqa vaqt bor.</i>",
     "en": "💳 <b>Top up balance</b>\n\n"
           "Amount: <b>{amount} UZS</b>\n\n"
           "Card number: <code>{card}</code>\n"
           "Cardholder: <b>{owner}</b>\n\n"
           "👇 After transferring <b>{amount} UZS</b> to this card, send the payment <b>receipt (screenshot)</b> here.\n"
+          "🤵 An admin will review the receipt and add the amount to your balance.\n"
           "⚠️ <i>You have 5 minutes to confirm the payment.</i>",
     "ru": "💳 <b>Пополнение баланса</b>\n\n"
           "Сумма: <b>{amount} сум</b>\n\n"
           "Номер карты: <code>{card}</code>\n"
           "Получатель: <b>{owner}</b>\n\n"
           "👇 После перевода <b>{amount} сум</b> на эту карту, отправьте <b>чек (скриншот)</b> сюда.\n"
+          "🤵 Администратор проверит чек и зачислит сумму на ваш баланс.\n"
           "⚠️ <i>У вас 5 минут для подтверждения платежа.</i>",
 }
 
