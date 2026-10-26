@@ -288,16 +288,14 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
                 f"👤 Xaridor: <a href='tg://user?id={user_id}'>{html.escape(query.from_user.first_name)}</a> (<code>{user_id}</code>)\n"
                 f"🌍 Davlat: {country_name}\n"
                 f"📱 Raqam: <code>{number[:-4]}****</code>\n"
-                f"💵 Narxi: {int(price):,} so'm"
+                f"💵 Narxi: {int(price):,} so'm\n\n"
+                f"🤖Bot havolasi:\n"
+                f"@tgraqamchi_bot"
             )
-            bot_username = (await context.bot.get_me()).username
             await context.bot.send_message(
                 chat_id=LOG_CHANNEL,
                 text=log_text,
                 parse_mode="HTML",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🤖 Botga o'tish", url=f"https://t.me/{bot_username}")
-                ]]),
             )
         except Exception:
             pass
