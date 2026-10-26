@@ -56,13 +56,13 @@ def _country_keyboard(items: list[tuple[str, str]], page: int, lang: str) -> Inl
     keyboard = paginated_keyboard(
         items, page, per_page=14, prefix="country", back_callback=None, lang=lang
     )
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton(
+    buttons = list(keyboard.inline_keyboard)
+    if page == 0:
+        buttons.insert(0, [InlineKeyboardButton(
             s.BUY_TOP_CHEAP_BTN.get(lang, s.BUY_TOP_CHEAP_BTN["uz"]),
             callback_data="top_cheap_countries",
-        )],
-        *keyboard.inline_keyboard,
-    ])
+        )])
+    return InlineKeyboardMarkup(buttons)
 
 
 async def buy_number_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -125,20 +125,17 @@ async def top_10_countries_handler(update: Update, context: ContextTypes.DEFAULT
     if user_data and user_data["is_banned"]:
         return
 
-    countries = await _load_country_items()
-    top_10 = sorted(countries, key=lambda item: item[2])[:10]
+    page = 0
+    if query and query.data.startswith("page_topcheap_"):
+        page = int(query.data.rsplit("_", 1)[1])
 
-    buttons = []
-    row = []
-    for code, name, price in top_10:
-        label = f"{name} | {int(price):,} so'm"
-        row.append(InlineKeyboardButton(label, callback_data=f"select_country_{code}"))
-        if len(row) == 2:
-            buttons.append(row)
-            row = []
-    if row:
-        buttons.append(row)
-
+    countries = sorted(await _load_country_items(), key=lambda item: item[2])
+    items = [
+        (f"select_country_{code}", f"{name} | {int(price):,} so'm")
+        for code, name, price in countries
+    ]
+    keyboard = paginated_keyboard(items, page, per_page=14, prefix="topcheap", lang=lang)
+    buttons = list(keyboard.inline_keyboard)
     buttons.append([InlineKeyboardButton(
         s.TOP10_ALL_BTN.get(lang, s.TOP10_ALL_BTN["uz"]),
         callback_data="show_countries"

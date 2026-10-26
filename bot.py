@@ -321,6 +321,7 @@ def main():
     app.add_handler(CallbackQueryHandler(country_page_callback, pattern=r"^page_country_\d+$"))
     app.add_handler(CallbackQueryHandler(country_page_callback, pattern=r"^show_countries$"))
     app.add_handler(CallbackQueryHandler(top_10_countries_handler, pattern=r"^top_cheap_countries$"))
+    app.add_handler(CallbackQueryHandler(top_10_countries_handler, pattern=r"^page_topcheap_\d+$"))
     app.add_handler(CallbackQueryHandler(select_country_callback, pattern=r"^select_country_"))
     app.add_handler(CallbackQueryHandler(cancel_buy_callback, pattern="^cancel_buy$"))
     app.add_handler(CallbackQueryHandler(confirm_buy_callback, pattern="^confirm_buy$"))

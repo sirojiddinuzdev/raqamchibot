@@ -304,9 +304,9 @@ SELECT_COUNTRY = {
 }
 
 TOP10_TITLE = {
-    "uz": "🔝 <b>Eng arzon 10 ta davlat</b>\n\nQuyidagilardan birini tanlang:",
-    "en": "🔝 <b>Top 10 cheapest countries</b>\n\nChoose one of the following:",
-    "ru": "🔝 <b>Топ 10 дешёвых стран</b>\n\nВыберите одну из следующих:",
+    "uz": "🔝 <b>Eng arzon davlatlar</b>\n\nQuyidagilardan birini tanlang:",
+    "en": "🔝 <b>Cheapest countries</b>\n\nChoose one of the following:",
+    "ru": "🔝 <b>Самые дешёвые страны</b>\n\nВыберите одну из следующих:",
 }
 
 TOP10_ALL_BTN = {
