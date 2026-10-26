@@ -273,12 +273,12 @@ async def history_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     history_text = s.HISTORY_HEADER.get(lang, s.HISTORY_HEADER["uz"])
-    for purchase in completed_purchases:
+    for index, purchase in enumerate(completed_purchases, start=page * 10 + 1):
         bought_at = html.escape(purchase["bought_at"] or "")
         number = html.escape(purchase["number"] or "")
         country = html.escape(get_country_name(purchase["country"] or ""))
         history_text += (
-            f"{country}\n"
+            f"{index}. {country}\n"
             f"📅 {bought_at}\n"
             f"🔢 <code>{number}</code>\n"
             f"💵 {int(purchase['price']):,} so'm\n\n"

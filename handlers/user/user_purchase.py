@@ -290,7 +290,15 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
                 f"📱 Raqam: <code>{number[:-4]}****</code>\n"
                 f"💵 Narxi: {int(price):,} so'm"
             )
-            await context.bot.send_message(chat_id=LOG_CHANNEL, text=log_text, parse_mode="HTML")
+            bot_username = (await context.bot.get_me()).username
+            await context.bot.send_message(
+                chat_id=LOG_CHANNEL,
+                text=log_text,
+                parse_mode="HTML",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🤖 Botga o'tish", url=f"https://t.me/{bot_username}")
+                ]]),
+            )
         except Exception:
             pass
 
