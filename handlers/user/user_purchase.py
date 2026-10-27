@@ -53,10 +53,22 @@ async def _get_country_menu_items() -> list[tuple[str, str]]:
 
 
 def _country_keyboard(items: list[tuple[str, str]], page: int, lang: str) -> InlineKeyboardMarkup:
-    keyboard = paginated_keyboard(
-        items, page, per_page=14, prefix="country", back_callback=None, lang=lang
-    )
-    buttons = list(keyboard.inline_keyboard)
+    start = 0 if page == 0 else 14 + (page - 1) * 10
+    page_size = 14 if page == 0 else 10
+    end = min(start + page_size, len(items))
+    buttons = [
+        [InlineKeyboardButton(label, callback_data=callback_data)]
+        for callback_data, label in items[start:end]
+    ]
+
+    navigation = []
+    if page > 0:
+        navigation.append(InlineKeyboardButton("⬅️", callback_data=f"page_country_{page - 1}"))
+    if end < len(items):
+        navigation.append(InlineKeyboardButton("➡️", callback_data=f"page_country_{page + 1}"))
+    if navigation:
+        buttons.append(navigation)
+
     if page == 0:
         buttons.insert(0, [InlineKeyboardButton(
             s.BUY_TOP_CHEAP_BTN.get(lang, s.BUY_TOP_CHEAP_BTN["uz"]),
@@ -134,7 +146,7 @@ async def top_10_countries_handler(update: Update, context: ContextTypes.DEFAULT
         (f"select_country_{code}", f"{name} | {int(price):,} so'm")
         for code, name, price in countries
     ]
-    keyboard = paginated_keyboard(items, page, per_page=14, prefix="topcheap", lang=lang)
+    keyboard = paginated_keyboard(items, page, per_page=10, prefix="topcheap", lang=lang)
     buttons = list(keyboard.inline_keyboard)
     buttons.append([InlineKeyboardButton(
         s.TOP10_ALL_BTN.get(lang, s.TOP10_ALL_BTN["uz"]),
