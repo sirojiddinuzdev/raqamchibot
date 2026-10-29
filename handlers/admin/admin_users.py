@@ -1,4 +1,4 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 import html
 
@@ -65,12 +65,12 @@ async def adm_balance_menu_handler(update: Update, context: ContextTypes.DEFAULT
     user_id = update.effective_user.id
     if not await is_admin(user_id):
         return
-    
-    kbd = ReplyKeyboardMarkup([
-        ["💸 Balans qo'shish", "💸 Balans ayirish"],
-        ["🔙 Orqaga"]
-    ], resize_keyboard=True)
-    await update.message.reply_text("💰 Balans boshqaruvi:", reply_markup=kbd)
+
+    context.user_data["adm_action"] = "search_user"
+    await update.message.reply_text(
+        "Foydalanuvchi ID sini kiriting:",
+        reply_markup=cancel_keyboard(),
+    )
 
 async def prompt_user_id_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Foydalanuvchi qidirish va balans boshqaruvi uchun umumiy handler"""
