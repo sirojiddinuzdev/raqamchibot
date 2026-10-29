@@ -39,6 +39,7 @@ from handlers.user import (
     get_code_callback,
     cancel_deposit_callback,
     start_deposit_callback,
+    deposit_check_handler,
 )
 from handlers.user.user_promocode import user_promo_handler
 from handlers.admin import (
@@ -218,6 +219,15 @@ async def universal_media_handler(update: Update, context: ContextTypes.DEFAULT_
         return
 
 
+async def universal_document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """To'lov cheklarini zaxira nusxa hujjatlaridan ajratib yo'naltirish."""
+    if context.user_data.get("awaiting_deposit_check"):
+        await deposit_check_handler(update, context)
+        return
+
+    await adm_receive_db_document_handler(update, context)
+
+
 # ─── Bot buyruqlarini sozlash ─────────────────────────────────
 
 async def daily_backup_job(context: ContextTypes.DEFAULT_TYPE):
@@ -369,7 +379,7 @@ def main():
     # ── Matn va media kiritish uchun handlerlar ──
     app.add_handler(MessageHandler(
         filters.Document.ALL, 
-        adm_receive_db_document_handler
+        universal_document_handler
     ))
     app.add_handler(MessageHandler(
         filters.TEXT & ~filters.COMMAND,
