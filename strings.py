@@ -394,7 +394,7 @@ BUY_SUCCESS = {
           "💵 Narxi: {price} so'm\n"
           "💰 Qolgan balans: {balance} so'm\n\n"
           "⚠️ <b>DIQQAT:</b> Raqamni rasmiy Telegram ilovasida UMUMAN ishlatmang! Aks holda darhol bloklanadi.\n"
-          "👉 Faqat norasmiy ilovalardan (Telegram X, Plus Messenger, Nicegram va h.k.) foydalaning.\n\n"
+          "👉 Faqat norasmiy ilovalardan (Plus Messenger, Telegraph va h.k.) foydalaning.\n\n"
           "📨 SMS kodni olish uchun tugmani bosing.",
     "en": "✅ <b>Number purchased successfully!</b>\n\n"
           "🌍 Country: {country}\n"
@@ -402,7 +402,7 @@ BUY_SUCCESS = {
           "💵 Price: {price} UZS\n"
           "💰 Remaining balance: {balance} UZS\n\n"
           "⚠️ <b>WARNING:</b> NEVER use this number in the official Telegram app! It will be immediately blocked.\n"
-          "👉 Only use unofficial apps (Telegram X, Plus Messenger, Nicegram, etc.)\n\n"
+          "👉 Only use unofficial apps (Plus Messenger, Telegraph, etc.)\n\n"
           "📨 Press the button to receive the SMS code.",
     "ru": "✅ <b>Номер успешно куплен!</b>\n\n"
           "🌍 Страна: {country}\n"
@@ -410,7 +410,7 @@ BUY_SUCCESS = {
           "💵 Цена: {price} сум\n"
           "💰 Остаток на балансе: {balance} сум\n\n"
           "⚠️ <b>ВНИМАНИЕ:</b> НИКОГДА не используйте этот номер в официальном Telegram! Он будет немедленно заблокирован.\n"
-          "👉 Используйте только неофициальные приложения (Telegram X, Plus Messenger, Nicegram и др.)\n\n"
+          "👉 Используйте только неофициальные приложения (Plus Messenger, Telegraph и др.)\n\n"
           "📨 Нажмите кнопку для получения SMS-кода.",
 }
 

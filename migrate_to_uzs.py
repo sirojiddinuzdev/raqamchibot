@@ -8,13 +8,13 @@ EXCHANGE_RATE = int(os.getenv("EXCHANGE_RATE", "12000"))
 DB_PATH = "raqamchi.db"
 
 def migrate():
-    print(f"Baza migratsiyasi boshlandi... Valyuta kursi: {EXCHANGE_RATE}")
+    # print(f"Baza migratsiyasi boshlandi... Valyuta kursi: {EXCHANGE_RATE}")
     with closing(sqlite3.connect(DB_PATH)) as conn:
         with conn:
             with closing(conn.cursor()) as cursor:
                 # 1. users jadvali (balance)
                 cursor.execute("UPDATE users SET balance = balance * ?", (EXCHANGE_RATE,))
-                print(f"Users jadvali yangilandi: {cursor.rowcount} ta qator")
+                # print(f"Users jadvali yangilandi: {cursor.rowcount} ta qator")
 
                 # 2. settings jadvali (country narxlari)
                 cursor.execute("SELECT key, value FROM settings WHERE key LIKE 'country_%'")
@@ -28,17 +28,17 @@ def migrate():
                         count += 1
                     except Exception as e:
                         print(f"Error {key}: {e}")
-                print(f"Settings jadvali yangilandi: {count} ta davlat narxi")
+                # print(f"Settings jadvali yangilandi: {count} ta davlat narxi")
 
                 # 3. purchases jadvali (price)
                 cursor.execute("UPDATE purchases SET price = price * ?", (EXCHANGE_RATE,))
-                print(f"Purchases jadvali yangilandi: {cursor.rowcount} ta qator")
+                # print(f"Purchases jadvali yangilandi: {cursor.rowcount} ta qator")
 
                 # 4. deposits jadvali (amount)
                 cursor.execute("UPDATE deposits SET amount = amount * ?", (EXCHANGE_RATE,))
-                print(f"Deposits jadvali yangilandi: {cursor.rowcount} ta qator")
+                # print(f"Deposits jadvali yangilandi: {cursor.rowcount} ta qator")
 
-    print("Migratsiya muvaffaqiyatli yakunlandi!")
+    # print("Migratsiya muvaffaqiyatli yakunlandi!")
 
 if __name__ == "__main__":
     migrate()
