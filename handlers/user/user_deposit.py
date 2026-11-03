@@ -26,10 +26,15 @@ async def _request_deposit_amount(update: Update, context: ContextTypes.DEFAULT_
     user_id = update.effective_user.id
     lang = await _get_lang(user_id)
     message = update.message or update.callback_query.message
+    context.user_data.pop("awaiting_search", None)
+    context.user_data.pop("user_search_active", None)
 
     card_number = await db.get_setting("card_number")
     if not card_number:
-        await message.reply_text(s.DEPOSIT_NO_CARD.get(lang, s.DEPOSIT_NO_CARD["uz"]))
+        await message.reply_text(
+            s.DEPOSIT_NO_CARD.get(lang, s.DEPOSIT_NO_CARD["uz"]),
+            reply_markup=main_menu_keyboard(await is_admin(user_id), lang),
+        )
         return
 
     context.user_data["awaiting_deposit_amount"] = True

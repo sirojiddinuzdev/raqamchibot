@@ -42,6 +42,13 @@ from handlers.user import (
     deposit_check_handler,
 )
 from handlers.user.user_promocode import user_promo_handler
+from handlers.qidiruv import (
+    search_menu_handler,
+    user_search_text_handler,
+    admin_search_edit_callback,
+    admin_search_delete_callback,
+    admin_search_add_callback,
+)
 from handlers.admin import (
     admin_panel,
     adm_stats_handler,
@@ -131,6 +138,10 @@ async def universal_text_handler(update: Update, context: ContextTypes.DEFAULT_T
             from handlers.admin import admin_text_handler
             await admin_text_handler(update, context)
             return
+
+    if context.user_data.get("user_search_active"):
+        await user_search_text_handler(update, context)
+        return
 
     # Foydalanuvchi summa kiritayotganda
     if context.user_data.get("awaiting_deposit_amount"):
@@ -308,6 +319,11 @@ def main():
     app.add_handler(MessageHandler(filters.Regex("^🎁 (Promokod|Promo code|Промокод)$"), user_promo_handler))
     # Til almashtirish
     app.add_handler(MessageHandler(filters.Regex("^🌐"), change_lang_handler))
+    # Qidiruv — tugma user yoki admin panelidan bosilganiga qarab yo'naltiriladi
+    app.add_handler(MessageHandler(
+        filters.Regex(r"^(🔍 Qidiruv|🔍 Search|🔍 Поиск)$"),
+        search_menu_handler,
+    ))
 
     # ── Reply Keyboard matnlari (Admin) ──
     app.add_handler(MessageHandler(filters.Regex("^📊 Statistika$"), adm_stats_handler))
@@ -355,6 +371,15 @@ def main():
     app.add_handler(CallbackQueryHandler(adm_remove_country_list_callback, pattern="^adm_remove_country_list$"))
     app.add_handler(CallbackQueryHandler(adm_remove_country_list_callback, pattern=r"^page_adm_del_\d+$"))
     app.add_handler(CallbackQueryHandler(adm_del_country_callback, pattern=r"^adm_del_country_"))
+    app.add_handler(CallbackQueryHandler(
+        admin_search_edit_callback, pattern=r"^admin_search_edit_[A-Z]{2}$"
+    ))
+    app.add_handler(CallbackQueryHandler(
+        admin_search_delete_callback, pattern=r"^admin_search_delete_[A-Z]{2}$"
+    ))
+    app.add_handler(CallbackQueryHandler(
+        admin_search_add_callback, pattern=r"^admin_search_add_[A-Z]{2}$"
+    ))
     app.add_handler(CallbackQueryHandler(adm_back_to_catalog_callback, pattern="^adm_back_to_catalog$"))
     app.add_handler(CallbackQueryHandler(adm_country_page_callback, pattern=r"^adm_country_page_\d+$"))
     app.add_handler(CallbackQueryHandler(adm_firstpage_handler, pattern=r"^adm_firstpage$"))

@@ -49,6 +49,7 @@ async def ensure_subscribed(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id = user.id
+    context.user_data.pop("admin_panel", None)
 
     ref_id = None
     if context.args:

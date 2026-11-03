@@ -80,6 +80,73 @@ MENU_ADMIN = {
     "ru": "👨‍💻 Admin Panel",
 }
 
+# Search feature strings
+SEARCH = {
+    "uz": "🔍 Qidiruv",
+    "en": "🔍 Search",
+    "ru": "🔍 Поиск",
+}
+SEARCH_PROMPT = {
+    "uz": "🔎 Iltimos, davlat nomini kiriting:",
+    "en": "🔎 Please enter a country name:",
+    "ru": "🔎 Пожалуйста, введите название страны:",
+}
+SEARCH_NOT_FOUND = {
+    "uz": "❌ Davlat topilmadi. Davlat nomini to'g'ri kiriting.",
+    "en": "❌ Country not found. Please enter the correct country name.",
+    "ru": "❌ Страна не найдена. Введите правильное название страны.",
+}
+SEARCH_NOT_ON_SALE = {
+    "uz": "❌ {country} hozir sotuvda yo'q.",
+    "en": "❌ {country} is not currently for sale.",
+    "ru": "❌ {country} сейчас не продаётся.",
+}
+SEARCH_RESULT = {
+    "uz": "🌍 <b>Davlat:</b> {country}\n💵 <b>Narxi:</b> {price} so'm",
+    "en": "🌍 <b>Country:</b> {country}\n💵 <b>Price:</b> {price} UZS",
+    "ru": "🌍 <b>Страна:</b> {country}\n💵 <b>Цена:</b> {price} сум",
+}
+SEARCH_BUY_BTN = {
+    "uz": "✅ Sotib olish",
+    "en": "✅ Buy",
+    "ru": "✅ Купить",
+}
+SEARCH_OTHER_COUNTRIES_BTN = {
+    "uz": "🌍 Boshqa davlatlar",
+    "en": "🌍 Other countries",
+    "ru": "🌍 Другие страны",
+}
+ADMIN_SEARCH_RESULT = {
+    "uz": "🌍 <b>Davlat:</b> {country}\n💵 <b>Sotuv narxi:</b> {price} so'm",
+    "en": "🌍 <b>Country:</b> {country}\n💵 <b>Sale price:</b> {price} UZS",
+    "ru": "🌍 <b>Страна:</b> {country}\n💵 <b>Цена продажи:</b> {price} сум",
+}
+ADMIN_SEARCH_NOT_ON_SALE = {
+    "uz": "❌ {country} hozir sotuvda yo'q.",
+    "en": "❌ {country} is not currently for sale.",
+    "ru": "❌ {country} сейчас не продаётся.",
+}
+ADMIN_SEARCH_EDIT_BTN = {
+    "uz": "✏️ Tahrirlash",
+    "en": "✏️ Edit",
+    "ru": "✏️ Изменить",
+}
+ADMIN_SEARCH_DELETE_BTN = {
+    "uz": "🗑 O'chirish",
+    "en": "🗑 Delete",
+    "ru": "🗑 Удалить",
+}
+ADMIN_SEARCH_ADD_BTN = {
+    "uz": "➕ Davlat qo'shish",
+    "en": "➕ Add country",
+    "ru": "➕ Добавить страну",
+}
+ADMIN_SEARCH_DELETED = {
+    "uz": "✅ {country} sotuvdan olib tashlandi.",
+    "en": "✅ {country} was removed from sale.",
+    "ru": "✅ {country} удалена из продажи.",
+}
+
 # ----- START / TIL TANLASH -----
 
 CHOOSE_LANGUAGE = {

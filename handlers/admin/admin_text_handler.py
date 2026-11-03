@@ -7,6 +7,7 @@ import database as db
 from config import ADMIN_IDS
 from helpers import admin_main_keyboard,cancel_keyboard
 from handlers.admin.admin_core import is_admin
+import strings as s
 
 
 async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -21,22 +22,41 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     text = update.message.text
 
-    if text == "❌ Bekor qilish":
+    if text in s.MENU_CANCEL.values():
         if action == "set_country_price":
+            search_origin = context.user_data.pop("country_search_origin", False)
+            if search_origin:
+                context.user_data.pop("admin_search_active", None)
             context.user_data.pop("adm_action", None)
             context.user_data.pop("target_country", None)
             context.user_data.pop("target_country_name", None)
             context.user_data.pop("country_selection_mode", None)
+            if search_origin:
+                context.user_data.pop("api_countries", None)
             await update.message.reply_text(
-                "Bekor qilindi.",
+                s.BUY_CANCELLED.get(
+                    await db.get_user_lang(user_id),
+                    s.BUY_CANCELLED["uz"],
+                ),
                 reply_markup=admin_main_keyboard(),
             )
-            from handlers.admin.admin_catalog import adm_countries_handler
-            await adm_countries_handler(update, context, preserve_page=True)
+            if not search_origin:
+                from handlers.admin.admin_catalog import adm_countries_handler
+                await adm_countries_handler(update, context, preserve_page=True)
             return
             
-        context.user_data.clear()
-        await update.message.reply_text("Bekor qilindi.", reply_markup=admin_main_keyboard())
+        if action == "search_country":
+            context.user_data.pop("adm_action", None)
+            context.user_data.pop("admin_search_active", None)
+        else:
+            context.user_data.clear()
+        await update.message.reply_text(
+            s.BUY_CANCELLED.get(
+                await db.get_user_lang(user_id),
+                s.BUY_CANCELLED["uz"],
+            ),
+            reply_markup=admin_main_keyboard(),
+        )
         return
 
     if action == "broadcast":
@@ -79,6 +99,10 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         except ValueError:
             await update.message.reply_text("❌ Noto'g'ri ID. Raqam kiriting.", reply_markup=admin_main_keyboard())
         context.user_data.pop("adm_action", None)
+
+    elif action == "search_country":
+        from handlers.qidiruv import admin_search_text_handler
+        await admin_search_text_handler(update, context)
 
     elif action in ["add_balance", "sub_balance", "confirm_deposit"]:
         try:
@@ -206,6 +230,7 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     elif action == "set_country_price":
         try:
+            search_origin = context.user_data.get("country_search_origin", False)
             clean_text = text.replace(",", "").replace(" ", "").replace(".", "")
             price = int(clean_text)
             c_code = context.user_data.get("target_country")
@@ -231,14 +256,21 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             await update.message.reply_text(
                 success_text,
                 parse_mode="HTML",
-                reply_markup=admin_main_keyboard() if selection_mode == "edit" else None,
+                reply_markup=admin_main_keyboard()
+                if selection_mode == "edit" or search_origin
+                else None,
             )
             
             context.user_data.pop("adm_action", None)
             context.user_data.pop("target_country", None)
             context.user_data.pop("target_country_name", None)
 
-            if selection_mode == "edit":
+            if search_origin:
+                context.user_data.pop("country_search_origin", None)
+                context.user_data.pop("admin_search_active", None)
+                context.user_data.pop("country_selection_mode", None)
+                context.user_data.pop("api_countries", None)
+            elif selection_mode == "edit":
                 context.user_data.pop("country_selection_mode", None)
                 from handlers.admin.admin_catalog import adm_countries_handler
                 await adm_countries_handler(update, context, preserve_page=True)
@@ -247,9 +279,14 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 await show_country_add_list(update.message, context)
             
         except ValueError:
+            search_origin = context.user_data.get("country_search_origin", False)
             await update.message.reply_text(
                 "❌ Noto'g'ri narx kiritildi. Qaytadan kiriting:",
-                reply_markup=cancel_keyboard(),
+                reply_markup=(
+                    None
+                    if search_origin
+                    else cancel_keyboard(await db.get_user_lang(user_id))
+                ),
             )
 
     elif action == "add_promo":

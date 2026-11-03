@@ -36,6 +36,7 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     context.user_data.clear()
+    context.user_data["admin_panel"] = True
     await update.message.reply_text(
         "👨‍💻 <b>Admin Panelga xush kelibsiz!</b>\n\nQuyidagi menyulardan birini tanlang:",
         parse_mode="HTML",

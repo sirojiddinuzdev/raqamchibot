@@ -14,7 +14,7 @@ import logging
 import database as db
 from strings import (
     MENU_BUY, MENU_BALANCE, MENU_HISTORY, MENU_CONTACT, MENU_BACK, MENU_CANCEL,
-    MENU_ADMIN, LANG_BTN, LANG_FLAGS, SUB_BTN,
+    MENU_ADMIN, LANG_BTN, LANG_FLAGS, SUB_BTN, SEARCH,
 )
 
 logger = logging.getLogger(__name__)
@@ -69,6 +69,9 @@ def main_menu_keyboard(is_admin: bool = False, lang: str = "uz") -> ReplyKeyboar
             MENU_CONTACT.get(lang, MENU_CONTACT["uz"]),
             lang_label,
         ],
+        [
+            SEARCH.get(lang, SEARCH["uz"]),
+        ],
     ]
     if is_admin:
         keys.append([MENU_ADMIN.get(lang, MENU_ADMIN["uz"])])
@@ -84,7 +87,7 @@ def admin_main_keyboard() -> ReplyKeyboardMarkup:
             ["📢 Kanallar", "🌍 Davlatlar"],
             ["💳 Karta sozlash", "📨 Ommaviy xabar"],
             ["🎁 Promokodlar", "👮‍♂️ Adminlar"],
-            ["💾 Zahira nusxa"],
+            [SEARCH["uz"], "💾 Zahira nusxa"],
             ["🔙 Bosh menyuga"],
         ],
         resize_keyboard=True
