@@ -13,6 +13,7 @@ from telegram.ext import (
     CallbackQueryHandler,
     MessageHandler,
     ChatJoinRequestHandler,
+    ApplicationHandlerStop,
     filters,
     ContextTypes,
 )
@@ -114,6 +115,25 @@ logger = logging.getLogger(__name__)
 
 async def admin_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await admin_panel(update, context)
+
+
+async def broadcast_command_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
+    """Ommaviy xabar holatida slash bilan boshlangan matnni oddiy xabar sifatida qabul qiladi."""
+    if (
+        not update.effective_user
+        or context.user_data.get("adm_action") != "broadcast"
+    ):
+        return
+
+    from handlers.admin.admin_core import is_admin
+    if not await is_admin(update.effective_user.id):
+        return
+
+    from handlers.admin.admin_text_handler import admin_text_handler
+    await admin_text_handler(update, context)
+    raise ApplicationHandlerStop
 
 
 # ─── Asosiy text handler (holatlarni boshqarish uchun) ────────
@@ -291,6 +311,12 @@ def main():
         .token(BOT_TOKEN)
         .post_init(post_init)
         .build()
+    )
+
+    # Ommaviy xabar paytida /start kabi komandalar command handlerlarga o'tmasin.
+    app.add_handler(
+        MessageHandler(filters.COMMAND, broadcast_command_handler),
+        group=-1,
     )
 
     # ── Buyruqlar ──
