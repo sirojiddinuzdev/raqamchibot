@@ -159,9 +159,22 @@ async def admin_search_text_handler(update: Update, context: ContextTypes.DEFAUL
     code, country_name = result
     price = await db.get_setting(f"country_{code}")
     if price is not None:
+        original_price = await db.get_setting(f"country_{code}_original")
+        if original_price is None:
+            api_countries = await spider.get_countries()
+            api_price = api_countries.get(code) if api_countries else None
+            if api_price is not None:
+                original_price = str(int(float(api_price) * EXCHANGE_RATE))
+
         text = s.ADMIN_SEARCH_RESULT.get(lang, s.ADMIN_SEARCH_RESULT["uz"]).format(
             country=country_name,
-            price=f"{int(float(price)):,}",
+            code=code,
+            original_price=(
+                f"{int(float(original_price)):,}"
+                if original_price is not None
+                else "Noma'lum"
+            ),
+            sale_price=f"{int(float(price)):,}",
         )
         keyboard = InlineKeyboardMarkup([[
             InlineKeyboardButton(

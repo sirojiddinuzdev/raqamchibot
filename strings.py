@@ -117,9 +117,15 @@ SEARCH_OTHER_COUNTRIES_BTN = {
     "ru": "🌍 Другие страны",
 }
 ADMIN_SEARCH_RESULT = {
-    "uz": "🌍 <b>Davlat:</b> {country}\n💵 <b>Sotuv narxi:</b> {price} so'm",
-    "en": "🌍 <b>Country:</b> {country}\n💵 <b>Sale price:</b> {price} UZS",
-    "ru": "🌍 <b>Страна:</b> {country}\n💵 <b>Цена продажи:</b> {price} сум",
+    "uz": "🌍 <b>Davlat:</b> {country} (<code>{code}</code>)\n"
+          "💵 <b>Asl narxi:</b> {original_price} so'm\n"
+          "💰 <b>Sotuv narxi:</b> {sale_price} so'm",
+    "en": "🌍 <b>Country:</b> {country} (<code>{code}</code>)\n"
+          "💵 <b>Original price:</b> {original_price} UZS\n"
+          "💰 <b>Sale price:</b> {sale_price} UZS",
+    "ru": "🌍 <b>Страна:</b> {country} (<code>{code}</code>)\n"
+          "💵 <b>Исходная цена:</b> {original_price} сум\n"
+          "💰 <b>Цена продажи:</b> {sale_price} сум",
 }
 ADMIN_SEARCH_NOT_ON_SALE = {
     "uz": "❌ {country} hozir sotuvda yo'q.",
