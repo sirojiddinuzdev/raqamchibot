@@ -290,9 +290,9 @@ async def post_init(application: Application):
     await db.init_db()
     logger.info("✅ Ma'lumotlar bazasi ishga tushdi")
 
-    t = time(hour=23, minute=30, tzinfo=ZoneInfo("Asia/Tashkent"))
+    t = time(hour=23, minute=59, tzinfo=ZoneInfo("Asia/Tashkent"))
     application.job_queue.run_daily(daily_backup_job, time=t)
-    logger.info("✅ Kunlik zahira (23:30) jadvalga qo'shildi")
+    logger.info("✅ Kunlik zahira (23:59) jadvalga qo'shildi")
 
     commands = [
         BotCommand("start", "Botni ishga tushirish"),
