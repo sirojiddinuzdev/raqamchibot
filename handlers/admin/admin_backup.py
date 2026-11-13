@@ -54,7 +54,8 @@ async def adm_restore_backup_callback(update: Update, context: ContextTypes.DEFA
     await query.message.chat.send_message(
         "⚠️ <b>DIQQAT! Bazani qayta tiklash xavfli jarayon!</b>\n\n"
         "Eski bazani yuklaganingizda, undan keyingi barcha ma'lumotlar (yangi foydalanuvchilar, to'lovlar, raqamlar) <b>O'CHIB KETADI</b>.\n\n"
-        "Iltimos, qayta tiklash uchun botdan olingan <code>.json</code> formatidagi PostgreSQL zaxira faylini yuboring:",
+        "Iltimos, <code>.json</code> formatidagi PostgreSQL nusxasini yoki "
+        "<code>.sqlite</code> formatidagi SQLite nusxasini yuboring:",
         parse_mode="HTML",
         reply_markup=cancel_keyboard()
     )
@@ -73,32 +74,40 @@ async def adm_receive_db_document_handler(update: Update, context: ContextTypes.
         await update.message.reply_text("❌ Iltimos, fayl yuboring (document).")
         return
 
-    if not doc.file_name or not doc.file_name.lower().endswith(".json"):
-        await update.message.reply_text("❌ Noto'g'ri fayl formati! Faqat <code>.json</code> zaxira fayli qabul qilinadi.", parse_mode="HTML")
+    file_name = (doc.file_name or "").lower()
+    if not file_name.endswith((".json", ".sqlite")):
+        await update.message.reply_text(
+            "❌ Noto'g'ri fayl formati! <code>.json</code> yoki "
+            "<code>.sqlite</code> zaxira fayli yuboring.",
+            parse_mode="HTML",
+        )
         return
 
-    await update.message.reply_text("⏳ PostgreSQL bazasi qayta tiklanmoqda, kuting...")
+    await update.message.reply_text("⏳ Baza qayta tiklanmoqda, kuting...")
 
     try:
         file = await context.bot.get_file(doc.file_id)
         buffer = io.BytesIO()
         await file.download_to_memory(buffer)
-        payload = json.loads(buffer.getvalue())
-        await db.restore_backup(payload)
+        if file_name.endswith(".sqlite"):
+            await db.restore_sqlite_backup(buffer.getvalue())
+        else:
+            payload = json.loads(buffer.getvalue())
+            await db.restore_backup(payload)
 
         context.user_data.pop("adm_action", None)
         await update.message.reply_text(
-            "✅ <b>PostgreSQL bazasi muvaffaqiyatli qayta tiklandi!</b>",
+            "✅ <b>Baza muvaffaqiyatli qayta tiklandi!</b>",
             parse_mode="HTML",
             reply_markup=admin_main_keyboard()
         )
     except (json.JSONDecodeError, UnicodeDecodeError, ValueError) as error:
-        logger.warning("Rejected invalid PostgreSQL backup: %s", error)
+        logger.warning("Rejected invalid database backup: %s", error)
         await update.message.reply_text(
             "❌ Fayl yaroqsiz yoki qo‘llab-quvvatlanmaydigan zaxira nusxasi."
         )
     except Exception:
-        logger.exception("Failed to restore PostgreSQL backup")
+        logger.exception("Failed to restore database backup")
         await update.message.reply_text(
             "❌ Baza nusxasini tiklashda xatolik yuz berdi. "
             "Baza o‘zgartirilmagan bo‘lishi kerak; loglarni tekshiring."

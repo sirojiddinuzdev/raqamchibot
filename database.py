@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import sqlite3
 from contextlib import asynccontextmanager
 from typing import Any, AsyncGenerator
 
@@ -631,6 +632,85 @@ async def restore_backup(payload: Any) -> None:
                     f"INSERT INTO {table} ({column_sql}) VALUES ({placeholders})",
                     values,
                 )
+
+        for table in _SEQUENCE_TABLES:
+            await db.execute(
+                f"""SELECT setval(
+                    pg_get_serial_sequence('{table}', 'id'),
+                    COALESCE(MAX(id), 1),
+                    MAX(id) IS NOT NULL
+                ) FROM {table}"""
+            )
+
+
+async def restore_sqlite_backup(data: bytes) -> None:
+    """Atomically replace application tables from a SQLite database file."""
+    if not data:
+        raise ValueError("SQLite backup is empty.")
+
+    sqlite_db = sqlite3.connect(":memory:")
+    try:
+        try:
+            sqlite_db.deserialize(data)
+        except sqlite3.Error as error:
+            raise ValueError("Invalid SQLite backup file.") from error
+
+        sqlite_tables = {
+            row[0]
+            for row in sqlite_db.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+        backup_data: dict[str, tuple[list[str], list[tuple[Any, ...]]]] = {}
+        required_columns = {
+            "users": {"user_id"},
+            "purchases": {"id"},
+            "deposits": {"id"},
+            "channels": {"id"},
+            "promocodes": {"id"},
+            "promocode_uses": {"user_id", "promocode_id"},
+            "join_requests": {"user_id", "chat_id"},
+            "settings": {"key"},
+        }
+
+        for table in BACKUP_TABLES:
+            if table not in sqlite_tables:
+                raise ValueError(f"SQLite backup is missing table {table!r}.")
+
+            columns = [
+                row[1] for row in sqlite_db.execute(f"PRAGMA table_info({table})")
+            ]
+            if not required_columns[table].issubset(columns):
+                raise ValueError(f"SQLite table {table!r} has an unsupported schema.")
+            rows = sqlite_db.execute(f"SELECT * FROM {table}").fetchall()
+            backup_data[table] = (columns, rows)
+    finally:
+        sqlite_db.close()
+
+    async with get_connection() as db:
+        for table, (columns, _) in backup_data.items():
+            async with db.cursor(row_factory=dict_row) as cur:
+                await cur.execute(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema = current_schema() AND table_name = %s",
+                    (table,),
+                )
+                allowed_columns = {row["column_name"] for row in await cur.fetchall()}
+            if not allowed_columns or not set(columns).issubset(allowed_columns):
+                raise ValueError(f"SQLite table {table!r} has unsupported columns.")
+
+        for table in reversed(BACKUP_TABLES):
+            await db.execute(f"DELETE FROM {table}")
+
+        for table in BACKUP_TABLES:
+            columns, rows = backup_data[table]
+            if not rows:
+                continue
+            column_sql = ", ".join(columns)
+            placeholders = ", ".join(["%s"] * len(columns))
+            query = f"INSERT INTO {table} ({column_sql}) VALUES ({placeholders})"
+            async with db.cursor() as cur:
+                await cur.executemany(query, rows)
 
         for table in _SEQUENCE_TABLES:
             await db.execute(
