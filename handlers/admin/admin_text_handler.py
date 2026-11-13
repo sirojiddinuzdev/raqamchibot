@@ -10,6 +10,22 @@ from handlers.admin.admin_core import is_admin
 import strings as s
 
 
+def _reset_admin_flow(context: ContextTypes.DEFAULT_TYPE):
+    """Qolgan admin holatlarini faqat kerakli ma'lumotlar bilan tozalash."""
+    for key in [
+        "adm_action",
+        "target_country",
+        "target_country_name",
+        "country_selection_mode",
+        "country_search_origin",
+        "admin_search_active",
+        "api_countries",
+        "target_user",
+        "target_dep_id",
+    ]:
+        context.user_data.pop(key, None)
+
+
 async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Adminning turli inputlarini qabul qilish"""
     user_id = update.effective_user.id
@@ -27,10 +43,7 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             search_origin = context.user_data.pop("country_search_origin", False)
             if search_origin:
                 context.user_data.pop("admin_search_active", None)
-            context.user_data.pop("adm_action", None)
-            context.user_data.pop("target_country", None)
-            context.user_data.pop("target_country_name", None)
-            context.user_data.pop("country_selection_mode", None)
+            _reset_admin_flow(context)
             if search_origin:
                 context.user_data.pop("api_countries", None)
             await update.message.reply_text(
@@ -44,12 +57,12 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 from handlers.admin.admin_catalog import adm_countries_handler
                 await adm_countries_handler(update, context, preserve_page=True)
             return
-            
+
         if action == "search_country":
             context.user_data.pop("adm_action", None)
             context.user_data.pop("admin_search_active", None)
         else:
-            context.user_data.clear()
+            _reset_admin_flow(context)
         await update.message.reply_text(
             s.BUY_CANCELLED.get(
                 await db.get_user_lang(user_id),
