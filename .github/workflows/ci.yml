@@ -37,12 +37,12 @@ jobs:
       - name: Import bot
         run: python -c "import bot"
 
-      - name: Initialize database
-        env:
-          RAILWAY_VOLUME_MOUNT_PATH: ${{ runner.temp }}/raqamchi-ci
-        run: |
-          mkdir -p "$RAILWAY_VOLUME_MOUNT_PATH"
-          python -c "import asyncio, database; asyncio.run(database.init_db())"
+      # - name: Initialize database
+      #   env:
+      #     RAILWAY_VOLUME_MOUNT_PATH: ${{ runner.temp }}/raqamchi-ci
+      #   run: |
+      #     mkdir -p "$RAILWAY_VOLUME_MOUNT_PATH"
+      #     python -c "import asyncio, database; asyncio.run(database.init_db())"
 
   deploy:
     needs: validate
