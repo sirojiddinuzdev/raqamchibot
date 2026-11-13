@@ -1,9 +1,7 @@
-import aiosqlite
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 import database as db
-from database import DB_PATH
 from helpers import cancel_keyboard, paginated_keyboard
 from config import SPIDER_API_KEY, EXCHANGE_RATE
 from spider_api import SpiderAPI
@@ -23,8 +21,8 @@ async def adm_countries_handler(
     if not await is_admin(user_id):
         return
 
-    async with aiosqlite.connect(DB_PATH) as dbase:
-        async with dbase.execute("SELECT key, value FROM settings WHERE key LIKE 'country_%'") as cur:
+    async with db.get_connection() as dbase:
+        async with await dbase.execute("SELECT key, value FROM settings WHERE key LIKE 'country_%'") as cur:
             rows = await cur.fetchall()
 
     rows = [r for r in rows if not r[0].endswith("_original")]
@@ -98,8 +96,8 @@ async def adm_back_to_catalog_callback(update: Update, context: ContextTypes.DEF
 
 async def _get_country_add_items(context: ContextTypes.DEFAULT_TYPE) -> list[tuple[str, str]]:
     api_countries = context.user_data.get("api_countries", {})
-    async with aiosqlite.connect(DB_PATH) as dbase:
-        async with dbase.execute(
+    async with db.get_connection() as dbase:
+        async with await dbase.execute(
             "SELECT key FROM settings WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"
         ) as cur:
             sold_codes = {
@@ -135,8 +133,8 @@ async def show_country_add_list(message, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def _show_first_page_countries(query, context: ContextTypes.DEFAULT_TYPE, page: int = 0):
-    async with aiosqlite.connect(DB_PATH) as dbase:
-        async with dbase.execute(
+    async with db.get_connection() as dbase:
+        async with await dbase.execute(
             "SELECT key FROM settings WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"
         ) as cur:
             rows = await cur.fetchall()
@@ -209,8 +207,8 @@ async def adm_firstpage_toggle_callback(update: Update, context: ContextTypes.DE
         return
 
     code = query.data.removeprefix("adm_firstpage_toggle_")
-    async with aiosqlite.connect(DB_PATH) as dbase:
-        async with dbase.execute(
+    async with db.get_connection() as dbase:
+        async with await dbase.execute(
             "SELECT key FROM settings WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"
         ) as cur:
             active_codes = {
@@ -336,8 +334,8 @@ async def adm_edit_country_list_callback(update: Update, context: ContextTypes.D
     if query.data.startswith("page_adm_edit_"):
         page = int(query.data.split("_")[-1])
 
-    async with aiosqlite.connect(DB_PATH) as dbase:
-        async with dbase.execute("SELECT key FROM settings WHERE key LIKE 'country_%'") as cur:
+    async with db.get_connection() as dbase:
+        async with await dbase.execute("SELECT key FROM settings WHERE key LIKE 'country_%'") as cur:
             rows = await cur.fetchall()
 
     rows = [r for r in rows if not r[0].endswith("_original")]
@@ -350,8 +348,8 @@ async def adm_edit_country_list_callback(update: Update, context: ContextTypes.D
     api_countries = await spider.get_countries()
     context.user_data["api_countries"] = api_countries
 
-    async with aiosqlite.connect(DB_PATH) as dbase:
-        async with dbase.execute(
+    async with db.get_connection() as dbase:
+        async with await dbase.execute(
             "SELECT key, value FROM settings WHERE key LIKE 'country_%'"
         ) as cur:
             settings_rows = await cur.fetchall()
@@ -397,8 +395,8 @@ async def adm_remove_country_list_callback(update: Update, context: ContextTypes
     if query.data.startswith("page_adm_del_"):
         page = int(query.data.split("_")[-1])
 
-    async with aiosqlite.connect(DB_PATH) as dbase:
-        async with dbase.execute("SELECT key FROM settings WHERE key LIKE 'country_%'") as cur:
+    async with db.get_connection() as dbase:
+        async with await dbase.execute("SELECT key FROM settings WHERE key LIKE 'country_%'") as cur:
             rows = await cur.fetchall()
 
     rows = [r for r in rows if not r[0].endswith("_original")]

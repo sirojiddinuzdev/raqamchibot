@@ -3,7 +3,7 @@ Raqamchi Bot — Asosiy fayl
 Python-telegram-bot v22 (PTB) kutubxonasi
 """
 import logging
-import asyncio
+import io
 from datetime import time
 from zoneinfo import ZoneInfo
 from telegram import Update, BotCommand
@@ -262,29 +262,25 @@ async def universal_document_handler(update: Update, context: ContextTypes.DEFAU
 # ─── Bot buyruqlarini sozlash ─────────────────────────────────
 
 async def daily_backup_job(context: ContextTypes.DEFAULT_TYPE):
-    from database import DB_PATH
-    import os
-    if not os.path.exists(DB_PATH):
+    try:
+        backup = await db.export_backup()
+    except Exception:
+        logger.exception("Failed to export daily PostgreSQL backup")
         return
-        
-    admins = getattr(db, 'get_all_admins', None)
-    if admins:
-        admins = await db.get_all_admins()
-    else:
-        from config import ADMIN_IDS
-        admins = ADMIN_IDS
+
+    from handlers.admin.admin_core import get_all_admin_ids
+    admins = await get_all_admin_ids()
         
     for admin in admins:
         try:
-            with open(DB_PATH, "rb") as f:
-                await context.bot.send_document(
-                    chat_id=admin, 
-                    document=f, 
-                    filename="database_backup.sqlite", 
-                    caption="💾 Kunlik avtomatik baza nusxasi."
-                )
-        except Exception as e:
-            logger.error(f"Failed to send backup to {admin}: {e}")
+            await context.bot.send_document(
+                chat_id=admin,
+                document=io.BytesIO(backup),
+                filename="database_backup.json",
+                caption="💾 Kunlik PostgreSQL baza nusxasi.",
+            )
+        except Exception:
+            logger.exception("Failed to send daily backup to admin %s", admin)
 
 async def post_init(application: Application):
     await db.init_db()
@@ -303,6 +299,10 @@ async def post_init(application: Application):
     logger.info("✅ Bot buyruqlari o'rnatildi")
 
 
+async def post_shutdown(application: Application):
+    await db.close_db()
+
+
 # ─── Asosiy funksiya ──────────────────────────────────────────
 
 def main():
@@ -310,6 +310,7 @@ def main():
         Application.builder()
         .token(BOT_TOKEN)
         .post_init(post_init)
+        .post_shutdown(post_shutdown)
         .build()
     )
 

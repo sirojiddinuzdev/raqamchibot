@@ -1,44 +1,40 @@
-import sqlite3
+import asyncio
 import os
-from contextlib import closing
-from dotenv import load_dotenv
 
-load_dotenv()
-EXCHANGE_RATE = int(os.getenv("EXCHANGE_RATE", "12000"))
-DB_PATH = "raqamchi.db"
+import database as db
 
-def migrate():
-    # print(f"Baza migratsiyasi boshlandi... Valyuta kursi: {EXCHANGE_RATE}")
-    with closing(sqlite3.connect(DB_PATH)) as conn:
-        with conn:
-            with closing(conn.cursor()) as cursor:
-                # 1. users jadvali (balance)
-                cursor.execute("UPDATE users SET balance = balance * ?", (EXCHANGE_RATE,))
-                # print(f"Users jadvali yangilandi: {cursor.rowcount} ta qator")
 
-                # 2. settings jadvali (country narxlari)
-                cursor.execute("SELECT key, value FROM settings WHERE key LIKE 'country_%'")
-                rows = cursor.fetchall()
-                count = 0
-                for key, value in rows:
-                    try:
-                        old_price = float(value)
-                        new_price = int(old_price * EXCHANGE_RATE) # Butun son qilib saqlaymiz (so'm)
-                        cursor.execute("UPDATE settings SET value = ? WHERE key = ?", (str(new_price), key))
-                        count += 1
-                    except Exception as e:
-                        print(f"Error {key}: {e}")
-                # print(f"Settings jadvali yangilandi: {count} ta davlat narxi")
+async def migrate() -> None:
+    exchange_rate = int(os.getenv("EXCHANGE_RATE", "12000"))
+    await db.init_db()
+    try:
+        async with db.get_connection() as connection:
+            await connection.execute(
+                "UPDATE users SET balance = balance * %s", (exchange_rate,)
+            )
+            rows = await (await connection.execute(
+                "SELECT key, value FROM settings WHERE key LIKE 'country_%'"
+            )).fetchall()
+            for key, value in rows:
+                try:
+                    new_price = int(float(value) * exchange_rate)
+                except (TypeError, ValueError) as error:
+                    raise ValueError(
+                        f"Invalid country price in setting {key!r}"
+                    ) from error
+                await connection.execute(
+                    "UPDATE settings SET value = %s WHERE key = %s",
+                    (str(new_price), key),
+                )
+            await connection.execute(
+                "UPDATE purchases SET price = price * %s", (exchange_rate,)
+            )
+            await connection.execute(
+                "UPDATE deposits SET amount = amount * %s", (exchange_rate,)
+            )
+    finally:
+        await db.close_db()
 
-                # 3. purchases jadvali (price)
-                cursor.execute("UPDATE purchases SET price = price * ?", (EXCHANGE_RATE,))
-                # print(f"Purchases jadvali yangilandi: {cursor.rowcount} ta qator")
-
-                # 4. deposits jadvali (amount)
-                cursor.execute("UPDATE deposits SET amount = amount * ?", (EXCHANGE_RATE,))
-                # print(f"Deposits jadvali yangilandi: {cursor.rowcount} ta qator")
-
-    # print("Migratsiya muvaffaqiyatli yakunlandi!")
 
 if __name__ == "__main__":
-    migrate()
+    asyncio.run(migrate())

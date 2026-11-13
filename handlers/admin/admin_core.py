@@ -1,5 +1,6 @@
 from telegram import Update
 from telegram.ext import ContextTypes
+from psycopg.rows import dict_row
 
 import database as db
 from config import ADMIN_IDS
@@ -59,13 +60,13 @@ async def adm_stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     total_income = 0.0
     total_original = 0.0
 
-    import aiosqlite
-    from database import DB_PATH
-    async with aiosqlite.connect(DB_PATH) as dbase:
-        dbase.row_factory = aiosqlite.Row
-        async with dbase.execute(
-            "SELECT country, SUM(price) as tot, COUNT(*) as c FROM purchases WHERE status='completed' GROUP BY country"
-        ) as cur:
+    async with db.get_connection() as dbase:
+        async with dbase.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                "SELECT country, SUM(price) as tot, COUNT(*) as c "
+                "FROM purchases WHERE status='completed' "
+                "GROUP BY country, country_name"
+            )
             rows = await cur.fetchall()
 
     if rows:

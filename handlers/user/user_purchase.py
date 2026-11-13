@@ -1,10 +1,8 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-import aiosqlite
 import html
 
 import database as db
-from database import DB_PATH
 from helpers import main_menu_keyboard, paginated_keyboard
 from countries import get_country_name
 from spider_api import SpiderAPI
@@ -17,8 +15,8 @@ spider = SpiderAPI(SPIDER_API_KEY)
 
 
 async def _load_country_items() -> list[tuple[str, str, float]]:
-    async with aiosqlite.connect(DB_PATH) as dbase:
-        async with dbase.execute(
+    async with db.get_connection() as dbase:
+        async with await dbase.execute(
             "SELECT key, value FROM settings WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"
         ) as cur:
             rows = await cur.fetchall()
@@ -170,9 +168,9 @@ async def select_country_callback(update: Update, context: ContextTypes.DEFAULT_
     lang = await _get_lang(user_id)
     user_data = await db.get_user(user_id)
 
-    async with aiosqlite.connect(DB_PATH) as dbase:
-        async with dbase.execute(
-            "SELECT value FROM settings WHERE key=?",
+    async with db.get_connection() as dbase:
+        async with await dbase.execute(
+            "SELECT value FROM settings WHERE key=%s",
             (f"country_{country_code}",)
         ) as cur:
             row = await cur.fetchone()
@@ -275,9 +273,9 @@ async def confirm_buy_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     hash_code = result["hash_code"]
 
     original_price = 0.0
-    async with aiosqlite.connect(DB_PATH) as dbase:
-        async with dbase.execute(
-            "SELECT value FROM settings WHERE key=?",
+    async with db.get_connection() as dbase:
+        async with await dbase.execute(
+            "SELECT value FROM settings WHERE key=%s",
             (f"country_{country_code}_original",)
         ) as cur:
             row_orig = await cur.fetchone()
