@@ -97,6 +97,10 @@ async def _initialize_database() -> None:
                 lang        TEXT DEFAULT 'uz'
             )
         """)
+        await db.execute(
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+            "referral_confirmed BOOLEAN NOT NULL DEFAULT TRUE"
+        )
         await db.execute("""
             CREATE TABLE IF NOT EXISTS purchases (
                 id             BIGSERIAL PRIMARY KEY,
@@ -192,6 +196,9 @@ async def _initialize_database() -> None:
             "CREATE INDEX IF NOT EXISTS idx_purchases_user_id ON purchases (user_id)"
         )
         await db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_users_referred_by ON users (referred_by)"
+        )
+        await db.execute(
             "CREATE INDEX IF NOT EXISTS idx_purchases_status ON purchases (status)"
         )
         await db.execute(
@@ -238,13 +245,47 @@ async def get_user(user_id: int) -> dict | None:
 
 async def create_user(
     user_id: int, username: str, full_name: str, referred_by: int | None = None
-) -> None:
+) -> bool:
     async with get_connection() as db:
-        await db.execute(
-            """INSERT INTO users (user_id, username, full_name, referred_by)
-               VALUES (%s, %s, %s, %s) ON CONFLICT (user_id) DO NOTHING""",
-            (user_id, username, full_name, referred_by),
+        cursor = await db.execute(
+            """INSERT INTO users (
+                   user_id, username, full_name, referred_by, referral_confirmed
+               )
+               VALUES (%s, %s, %s, %s, %s) ON CONFLICT (user_id) DO NOTHING""",
+            (
+                user_id,
+                username,
+                full_name,
+                referred_by,
+                referred_by is None,
+            ),
         )
+        return cursor.rowcount > 0
+
+
+async def confirm_referral(user_id: int) -> int | None:
+    """Confirm a new referral once the invited user passes subscription checks."""
+    async with get_connection() as db:
+        row = await (await db.execute(
+            """UPDATE users
+               SET referral_confirmed = TRUE
+               WHERE user_id = %s
+                 AND referred_by IS NOT NULL
+                 AND referral_confirmed = FALSE
+               RETURNING referred_by""",
+            (user_id,),
+        )).fetchone()
+        return row[0] if row else None
+
+
+async def get_referral_count(user_id: int) -> int:
+    async with get_connection() as db:
+        row = await (await db.execute(
+            """SELECT COUNT(*) FROM users
+               WHERE referred_by = %s AND referral_confirmed = TRUE""",
+            (user_id,),
+        )).fetchone()
+        return row[0] if row else 0
 
 
 async def get_user_lang(user_id: int) -> str:
@@ -308,6 +349,65 @@ async def get_users_count() -> int:
     async with get_connection() as db:
         row = await (await db.execute("SELECT COUNT(*) FROM users")).fetchone()
         return row[0] if row else 0
+
+
+async def get_referral_stats(user_id: int) -> tuple[int, list[dict]]:
+    async with get_connection() as db:
+        user_count = await (await db.execute(
+            """SELECT COUNT(*) FROM users
+               WHERE referred_by = %s AND referral_confirmed = TRUE""",
+            (user_id,),
+        )).fetchone()
+        async with db.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """SELECT referrer.user_id, referrer.username, referrer.full_name,
+                          COUNT(invited.user_id) AS referrals
+                   FROM users AS referrer
+                   JOIN users AS invited
+                     ON invited.referred_by = referrer.user_id
+                    AND invited.referral_confirmed = TRUE
+                   GROUP BY referrer.user_id, referrer.username, referrer.full_name
+                   ORDER BY referrals DESC, referrer.user_id ASC
+                   LIMIT 10"""
+            )
+            leaderboard = [dict(row) for row in await cur.fetchall()]
+    return (user_count[0] if user_count else 0), leaderboard
+
+
+async def get_admin_referral_stats() -> tuple[int, list[dict]]:
+    async with get_connection() as db:
+        async with db.cursor(row_factory=dict_row) as cur:
+            await cur.execute(
+                """WITH referral_counts AS (
+                       SELECT referrer.user_id, referrer.username, referrer.full_name,
+                              COUNT(invited.user_id) AS referrals
+                       FROM users AS referrer
+                       JOIN users AS invited
+                         ON invited.referred_by = referrer.user_id
+                        AND invited.referral_confirmed = TRUE
+                       GROUP BY referrer.user_id, referrer.username, referrer.full_name
+                   )
+                   SELECT COALESCE(SUM(referrals), 0) AS total_referrals
+                   FROM referral_counts"""
+            )
+            total = await cur.fetchone()
+            await cur.execute(
+                """WITH referral_counts AS (
+                       SELECT referrer.user_id, referrer.username, referrer.full_name,
+                              COUNT(invited.user_id) AS referrals
+                       FROM users AS referrer
+                       JOIN users AS invited
+                         ON invited.referred_by = referrer.user_id
+                        AND invited.referral_confirmed = TRUE
+                       GROUP BY referrer.user_id, referrer.username, referrer.full_name
+                   )
+                   SELECT user_id, username, full_name, referrals
+                   FROM referral_counts
+                   ORDER BY referrals DESC, user_id ASC
+                   LIMIT 10"""
+            )
+            leaderboard = [dict(row) for row in await cur.fetchall()]
+    return (total["total_referrals"] if total else 0), leaderboard
 
 
 async def get_settings() -> dict:
@@ -454,6 +554,41 @@ async def set_setting(key: str, value: str) -> None:
                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value""",
             (key, value),
         )
+
+
+async def update_country_original_prices(prices: dict[str, int]) -> list[dict]:
+    """Update API original prices for countries currently on sale."""
+    changes = []
+    async with get_connection() as db:
+        rows = await (await db.execute(
+            """SELECT key, value FROM settings
+               WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"""
+        )).fetchall()
+
+        for key, stored_price in rows:
+            country_code = key.removeprefix("country_")
+            if country_code not in prices:
+                continue
+
+            new_price = prices[country_code]
+            try:
+                old_price = int(float(stored_price))
+            except (TypeError, ValueError, OverflowError):
+                old_price = None
+            if old_price == new_price:
+                continue
+
+            await db.execute(
+                """INSERT INTO settings (key, value) VALUES (%s, %s)
+                   ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value""",
+                (f"country_{country_code}_original", str(new_price)),
+            )
+            changes.append({
+                "country": country_code,
+                "old_price": old_price,
+                "new_price": new_price,
+            })
+    return changes
 
 
 async def del_setting(key: str) -> None:
@@ -612,10 +747,17 @@ async def restore_backup(payload: Any) -> None:
                 raise RuntimeError(f"Database table {table!r} does not exist.")
 
             for record in tables[table]:
+                record_columns = set(record) if isinstance(record, dict) else set()
+                valid_columns = record_columns == allowed_columns or (
+                    table == "users"
+                    and "referral_confirmed" in allowed_columns
+                    and record_columns
+                    == allowed_columns - {"referral_confirmed"}
+                )
                 if (
                     not isinstance(record, dict)
                     or not record
-                    or set(record) != allowed_columns
+                    or not valid_columns
                 ):
                     raise ValueError(f"Invalid record in backup table {table!r}.")
 

@@ -4,6 +4,7 @@ Python-telegram-bot v22 (PTB) kutubxonasi
 """
 import logging
 import io
+import math
 from datetime import time
 from zoneinfo import ZoneInfo
 from telegram import Update, BotCommand
@@ -18,8 +19,10 @@ from telegram.ext import (
     ContextTypes,
 )
 
-from config import BOT_TOKEN, ADMIN_IDS
+from config import BOT_TOKEN, ADMIN_IDS, EXCHANGE_RATE, SPIDER_API_KEY
 import database as db
+from countries import get_country_name
+from spider_api import SpiderAPI
 from handlers.user import (
     start_handler,
     set_lang_callback,
@@ -30,6 +33,8 @@ from handlers.user import (
     my_balance_handler,
     history_handler,
     contact_admin_handler,
+    referral_link_handler,
+    referral_stats_handler,
     deposit_handler,
     buy_number_handler,
     country_page_callback,
@@ -53,6 +58,7 @@ from handlers.qidiruv import (
 from handlers.admin import (
     admin_panel,
     adm_stats_handler,
+    adm_referral_stats_handler,
     adm_users_handler,
     adm_add_balance_handler,
     adm_sub_balance_handler,
@@ -109,6 +115,7 @@ logging.basicConfig(
 )
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
+spider = SpiderAPI(SPIDER_API_KEY)
 
 
 # ─── Admin komandasi ──────────────────────────────────────────
@@ -282,6 +289,90 @@ async def daily_backup_job(context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             logger.exception("Failed to send daily backup to admin %s", admin)
 
+
+async def daily_country_price_sync_job(context: ContextTypes.DEFAULT_TYPE):
+    """Sync original UZS prices for active countries and notify admins of changes."""
+    try:
+        settings = await db.get_settings()
+        active_codes = [
+            key.removeprefix("country_")
+            for key in settings
+            if key.startswith("country_") and not key.endswith("_original")
+        ]
+        if not active_codes:
+            logger.info("Skipping country price sync: no countries are on sale")
+            return
+
+        api_countries = await spider.get_countries()
+        if not api_countries:
+            raise RuntimeError("Spider API returned no country prices")
+
+        prices = {}
+        for code in active_codes:
+            api_price = api_countries.get(code)
+            if api_price is None:
+                logger.warning("Spider API did not return a price for %s", code)
+                continue
+            try:
+                price_uzs = float(api_price) * EXCHANGE_RATE
+                if not math.isfinite(price_uzs) or price_uzs < 0:
+                    raise ValueError(f"Invalid API price: {api_price!r}")
+                prices[code] = int(price_uzs)
+            except (TypeError, ValueError, OverflowError):
+                logger.warning("Ignoring invalid Spider API price for %s: %r", code, api_price)
+
+        if not prices:
+            raise RuntimeError("Spider API returned no valid prices for active countries")
+
+        changes = await db.update_country_original_prices(prices)
+        if not changes:
+            logger.info("Country original prices are already up to date")
+            return
+
+        from handlers.admin.admin_core import get_all_admin_ids
+
+        lines = []
+        for change in changes:
+            old_price = change["old_price"]
+            old_label = (
+                f"{old_price:,} so'm" if old_price is not None else "Noma'lum"
+            )
+            lines.append(
+                f"• {get_country_name(change['country'])} ({change['country']}): "
+                f"<b>{old_label}</b> → <b>{change['new_price']:,} so'm</b>"
+            )
+        header = "🔄 <b>Asl narxlar yangilandi</b>\n\n"
+        chunks = []
+        current = header
+        for line in lines:
+            if len(current) + len(line) + 1 > 3500 and current != header:
+                chunks.append(current)
+                current = header
+            current += f"{line}\n"
+        chunks.append(current)
+
+        admins = await get_all_admin_ids()
+        if not admins:
+            logger.error("Country price changes were saved but no admins are configured")
+            return
+
+        for admin_id in admins:
+            for message in chunks:
+                try:
+                    await context.bot.send_message(
+                        chat_id=admin_id,
+                        text=message,
+                        parse_mode="HTML",
+                    )
+                except Exception:
+                    logger.exception(
+                        "Failed to notify admin %s about country price changes",
+                        admin_id,
+                    )
+    except Exception:
+        logger.exception("Daily country original-price sync failed")
+
+
 async def post_init(application: Application):
     await db.init_db()
     logger.info("✅ Ma'lumotlar bazasi ishga tushdi")
@@ -289,6 +380,10 @@ async def post_init(application: Application):
     t = time(hour=23, minute=59, tzinfo=ZoneInfo("Asia/Tashkent"))
     application.job_queue.run_daily(daily_backup_job, time=t)
     logger.info("✅ Kunlik zahira (23:59) jadvalga qo'shildi")
+
+    sync_time = time(hour=23, minute=50, tzinfo=ZoneInfo("Asia/Tashkent"))
+    application.job_queue.run_daily(daily_country_price_sync_job, time=sync_time)
+    logger.info("✅ Davlatlarning asl narxlarini API bilan sinxronlash (23:50) jadvalga qo'shildi")
 
     commands = [
         BotCommand("start", "Botni ishga tushirish"),
@@ -351,9 +446,21 @@ def main():
         filters.Regex(r"^(🔍 Qidiruv|🔍 Search|🔍 Поиск)$"),
         search_menu_handler,
     ))
+    app.add_handler(MessageHandler(
+        filters.Regex(r"^(🔗 Referral havola|🔗 Referral link|🔗 Реферальная ссылка)$"),
+        referral_link_handler,
+    ))
+    app.add_handler(MessageHandler(
+        filters.Regex(r"^(🏆 Referral statistika|🏆 Referral statistics|🏆 Статистика рефералов)$"),
+        referral_stats_handler,
+    ))
 
     # ── Reply Keyboard matnlari (Admin) ──
     app.add_handler(MessageHandler(filters.Regex("^📊 Statistika$"), adm_stats_handler))
+    app.add_handler(MessageHandler(
+        filters.Regex("^👥 Referral statistika$"),
+        adm_referral_stats_handler,
+    ))
     app.add_handler(MessageHandler(filters.Regex("^👥 Foydalanuvchilar$"), adm_users_handler))
     app.add_handler(MessageHandler(filters.Regex("^➖ Balans ➕$"), adm_balance_menu_handler))
     app.add_handler(MessageHandler(

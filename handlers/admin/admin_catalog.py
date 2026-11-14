@@ -28,7 +28,7 @@ async def adm_countries_handler(
     rows = [r for r in rows if not r[0].endswith("_original")]
     rows.sort(key=lambda r: get_country_name(r[0].replace("country_", "")))
 
-    api_countries = await spider.get_countries()
+    settings = await db.get_settings()
 
     if not update.callback_query and not preserve_page:
         context.user_data["adm_country_page"] = 0
@@ -48,11 +48,12 @@ async def adm_countries_handler(
         for k, v in page_rows:
             c_code = k.replace("country_", "")
             c_name = get_country_name(c_code)
-            api_price_usd = api_countries.get(c_code)
-            if api_price_usd:
-                api_price_uzs = f"{int(float(api_price_usd) * EXCHANGE_RATE):,.0f} so'm"
-            else:
-                api_price_uzs = "Noma'lum"
+            original_price = settings.get(f"country_{c_code}_original")
+            api_price_uzs = (
+                f"{int(float(original_price)):,} so'm"
+                if original_price is not None
+                else "Noma'lum"
+            )
             sale_price = f"{int(float(v)):,.0f} so'm" if v else "0 so'm"
             text += f"• {c_name} ({c_code}): Asl: <b>{api_price_uzs}</b> | Sotuv: <b>{sale_price}</b>\n"
 
@@ -345,9 +346,6 @@ async def adm_edit_country_list_callback(update: Update, context: ContextTypes.D
         await query.message.edit_text("❌ Hozircha davlatlar qo'shilmagan.")
         return
 
-    api_countries = await spider.get_countries()
-    context.user_data["api_countries"] = api_countries
-
     async with db.get_connection() as dbase:
         async with await dbase.execute(
             "SELECT key, value FROM settings WHERE key LIKE 'country_%'"
@@ -368,8 +366,6 @@ async def adm_edit_country_list_callback(update: Update, context: ContextTypes.D
         code = k[0].replace("country_", "")
         name = get_country_name(code)
         original_price = original_prices.get(code)
-        if original_price is None and api_countries.get(code):
-            original_price = str(int(float(api_countries[code]) * EXCHANGE_RATE))
         original_label = (
             f"{int(float(original_price)):,} so'm" if original_price is not None else "Noma'lum"
         )

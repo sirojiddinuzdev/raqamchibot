@@ -86,6 +86,16 @@ SEARCH = {
     "en": "🔍 Search",
     "ru": "🔍 Поиск",
 }
+MENU_REFERRAL = {
+    "uz": "🔗 Referral havola",
+    "en": "🔗 Referral link",
+    "ru": "🔗 Реферальная ссылка",
+}
+MENU_REFERRAL_STATS = {
+    "uz": "🏆 Referral statistika",
+    "en": "🏆 Referral statistics",
+    "ru": "🏆 Статистика рефералов",
+}
 SEARCH_PROMPT = {
     "uz": "🔎 Iltimos, davlat nomini kiriting:",
     "en": "🔎 Please enter a country name:",
@@ -256,16 +266,19 @@ BALANCE_TEXT = {
           "👤 Ism: {name}\n"
           "🆔 ID: <code>{user_id}</code>\n"
           "💵 Balans: <b>{balance} so'm</b>\n"
+          "👥 Taklif qilganlaringiz: <b>{referrals}</b>\n"
           "📅 Qo'shilgan: {joined}",
     "en": "💰 <b>Account info</b>\n\n"
           "👤 Name: {name}\n"
           "🆔 ID: <code>{user_id}</code>\n"
           "💵 Balance: <b>{balance} UZS</b>\n"
+          "👥 People invited: <b>{referrals}</b>\n"
           "📅 Joined: {joined}",
     "ru": "💰 <b>Информация об аккаунте</b>\n\n"
           "👤 Имя: {name}\n"
           "🆔 ID: <code>{user_id}</code>\n"
           "💵 Баланс: <b>{balance} сум</b>\n"
+          "👥 Приглашено вами: <b>{referrals}</b>\n"
           "📅 Дата регистрации: {joined}",
 }
 

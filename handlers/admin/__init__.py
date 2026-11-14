@@ -2,6 +2,7 @@ from .admin_core import (
     is_admin,
     admin_panel,
     adm_stats_handler,
+    adm_referral_stats_handler,
     adm_broadcast_handler
 )
 from .admin_users import (
@@ -55,6 +56,7 @@ __all__ = [
     "is_admin",
     "admin_panel",
     "adm_stats_handler",
+    "adm_referral_stats_handler",
     "adm_broadcast_handler",
     "adm_users_handler",
     "adm_add_balance_handler",

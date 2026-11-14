@@ -8,6 +8,8 @@ from .user_core import (
     contact_admin_handler,
     check_subscription_callback,
     chat_join_request_handler,
+    referral_link_handler,
+    referral_stats_handler,
 )
 from .user_purchase import (
     buy_number_handler,
@@ -35,6 +37,8 @@ __all__ = [
     "contact_admin_handler",
     "check_subscription_callback",
     "chat_join_request_handler",
+    "referral_link_handler",
+    "referral_stats_handler",
     "buy_number_handler",
     "country_page_callback",
     "select_country_callback",

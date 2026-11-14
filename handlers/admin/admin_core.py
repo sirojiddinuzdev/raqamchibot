@@ -1,3 +1,5 @@
+import html
+
 from telegram import Update
 from telegram.ext import ContextTypes
 from psycopg.rows import dict_row
@@ -106,6 +108,37 @@ async def adm_stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"💵 Asl narxi (Tan narxi): <b>{int(total_original):,} so'm</b>\n"
         f"💰 Biz sotgan narx: <b>{int(total_income):,} so'm</b>\n"
         f"📈 Sof foyda: <b>{int(profit):,} so'm</b>"
+    )
+    await update.message.reply_text(text, parse_mode="HTML")
+
+
+async def adm_referral_stats_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
+    user_id = update.effective_user.id
+    if not await is_admin(user_id):
+        return
+
+    total_referrals, leaderboard = await db.get_admin_referral_stats()
+    lines = []
+    for rank, referrer in enumerate(leaderboard, start=1):
+        display_name = (
+            f'@{referrer["username"]}'
+            if referrer["username"]
+            else referrer["full_name"] or str(referrer["user_id"])
+        )
+        safe_name = html.escape(display_name)
+        lines.append(
+            f'{rank}. <a href="tg://user?id={referrer["user_id"]}">'
+            f'{safe_name}</a> (ID: <code>{referrer["user_id"]}</code>) — '
+            f'<b>{referrer["referrals"]}</b> ta'
+        )
+
+    text = (
+        "🏆 <b>Referral statistikasi</b>\n\n"
+        f"👥 Referral orqali qo'shilganlar: <b>{total_referrals}</b> ta\n\n"
+        "🔝 <b>Eng ko'p odam taklif qilgan Top 10:</b>\n"
+        + ("\n".join(lines) if lines else "Hozircha referral yo'q.")
     )
     await update.message.reply_text(text, parse_mode="HTML")
 

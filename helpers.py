@@ -14,7 +14,8 @@ import logging
 import database as db
 from strings import (
     MENU_BUY, MENU_BALANCE, MENU_HISTORY, MENU_CONTACT, MENU_BACK, MENU_CANCEL,
-    MENU_ADMIN, LANG_BTN, LANG_FLAGS, SUB_BTN, SEARCH,
+    MENU_ADMIN, LANG_BTN, LANG_FLAGS, SUB_BTN, SEARCH, MENU_REFERRAL,
+    MENU_REFERRAL_STATS,
 )
 
 logger = logging.getLogger(__name__)
@@ -63,15 +64,17 @@ def main_menu_keyboard(is_admin: bool = False, lang: str = "uz") -> ReplyKeyboar
         [MENU_BUY.get(lang, MENU_BUY["uz"])],
         [
             MENU_BALANCE.get(lang, MENU_BALANCE["uz"]),
-            MENU_HISTORY.get(lang, MENU_HISTORY["uz"]),
+            SEARCH.get(lang, SEARCH["uz"]),
         ],
         [
-            MENU_CONTACT.get(lang, MENU_CONTACT["uz"]),
+            MENU_HISTORY.get(lang, MENU_HISTORY["uz"]),
             lang_label,
         ],
         [
-            SEARCH.get(lang, SEARCH["uz"]),
+            MENU_REFERRAL.get(lang, MENU_REFERRAL["uz"]),
+            MENU_REFERRAL_STATS.get(lang, MENU_REFERRAL_STATS["uz"]),
         ],
+        [MENU_CONTACT.get(lang, MENU_CONTACT["uz"])],
     ]
     if is_admin:
         keys.append([MENU_ADMIN.get(lang, MENU_ADMIN["uz"])])
@@ -88,6 +91,7 @@ def admin_main_keyboard() -> ReplyKeyboardMarkup:
             ["💳 Karta sozlash", "📨 Ommaviy xabar"],
             ["🎁 Promokodlar", "👮‍♂️ Adminlar"],
             [SEARCH["uz"], "💾 Zahira nusxa"],
+            ["👥 Referral statistika"],
             ["🔙 Bosh menyuga"],
         ],
         resize_keyboard=True

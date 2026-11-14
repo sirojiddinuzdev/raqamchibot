@@ -1,6 +1,7 @@
 import logging
 import html
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.error import TelegramError
 from telegram.ext import ContextTypes
 
 import database as db
@@ -34,16 +35,57 @@ async def ensure_subscribed(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     user_id = update.effective_user.id
     lang = await _get_lang(user_id)
     channels = await db.get_channels()
-    if not channels:
-        return True
-    not_subs = await check_user_subscribed(context.bot, user_id, channels)
-    if not_subs:
-        kbd = build_subscribe_keyboard(not_subs, "check_sub", lang)
-        text = s.SUB_REQUIRED.get(lang, s.SUB_REQUIRED["uz"]) + "\n".join(f"• {ch['channel_name']}" for ch in not_subs)
-        msg = update.message or (update.callback_query.message if update.callback_query else None)
-        if msg:
-            await msg.reply_text(text, parse_mode="HTML", reply_markup=kbd)
-    return not not_subs
+    if channels:
+        not_subs = await check_user_subscribed(context.bot, user_id, channels)
+        if not_subs:
+            kbd = build_subscribe_keyboard(not_subs, "check_sub", lang)
+            text = s.SUB_REQUIRED.get(lang, s.SUB_REQUIRED["uz"]) + "\n".join(f"• {ch['channel_name']}" for ch in not_subs)
+            msg = update.message or (update.callback_query.message if update.callback_query else None)
+            if msg:
+                await msg.reply_text(text, parse_mode="HTML", reply_markup=kbd)
+            return False
+
+    await _confirm_referral(update, context)
+    return True
+
+
+async def _confirm_referral(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    referrer_id = await db.confirm_referral(user.id)
+    if referrer_id is None:
+        return
+
+    referral_count = await db.get_referral_count(referrer_id)
+    referrer_lang = await _get_lang(referrer_id)
+    referred_name = html.escape(user.full_name or str(user.id))
+    referral_messages = {
+        "uz": (
+            f"🎉 Sizning referral havolangiz orqali "
+            f"<b>{referred_name}</b> qo'shildi!\n"
+            f"🏆 Jami ballaringiz: <b>{referral_count}</b>"
+        ),
+        "en": (
+            f"🎉 <b>{referred_name}</b> joined through your referral link!\n"
+            f"🏆 Your total points: <b>{referral_count}</b>"
+        ),
+        "ru": (
+            f"🎉 По вашей реферальной ссылке присоединился "
+            f"<b>{referred_name}</b>!\n"
+            f"🏆 Всего баллов: <b>{referral_count}</b>"
+        ),
+    }
+    try:
+        await context.bot.send_message(
+            chat_id=referrer_id,
+            text=referral_messages.get(referrer_lang, referral_messages["uz"]),
+            parse_mode="HTML",
+        )
+    except TelegramError:
+        logger.exception(
+            "Could not notify referrer %s about new referral %s",
+            referrer_id,
+            user.id,
+        )
 
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -62,6 +104,8 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     existing = await db.get_user(user_id)
     if not existing:
+        if ref_id is not None and not await db.get_user(ref_id):
+            ref_id = None
         await db.create_user(
             user_id=user_id,
             username=user.username or "",
@@ -162,6 +206,7 @@ async def check_subscription_callback(update: Update, context: ContextTypes.DEFA
             except Exception:
                 pass
     else:
+        await _confirm_referral(update, context)
         user_data = await db.get_user(user_id)
         balance = user_data["balance"] if user_data else 0.0
         await query.message.delete()
@@ -216,10 +261,12 @@ async def my_balance_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
 
     safe_fullname = html.escape(user_data['full_name'])
+    referral_count = await db.get_referral_count(user_id)
     text = s.BALANCE_TEXT.get(lang, s.BALANCE_TEXT["uz"]).format(
         name=safe_fullname,
         user_id=user_id,
         balance=f"{int(user_data['balance']):,}",
+        referrals=referral_count,
         joined=user_data['joined_at'][:10]
     )
 
@@ -314,4 +361,59 @@ async def contact_admin_handler(update: Update, context: ContextTypes.DEFAULT_TY
     await update.message.reply_text(
         text, parse_mode="HTML",
         reply_markup=main_menu_keyboard(await is_admin(user_id), lang)
+    )
+
+
+async def referral_link_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    lang = await _get_lang(user_id)
+    if not await ensure_subscribed(update, context):
+        return
+
+    bot_info = await context.bot.get_me()
+    if not bot_info.username:
+        raise RuntimeError("Telegram bot username is unavailable for referral links.")
+
+    referral_link = f"https://t.me/{bot_info.username}?start={user_id}"
+    messages = {
+        "uz": f"🔗 Sizning referral havolangiz:\n{referral_link}\n\n"
+              "Havola orqali yangi foydalanuvchi taklif qilsangiz, har biri uchun 1 ball olasiz.",
+        "en": f"🔗 Your referral link:\n{referral_link}\n\n"
+              "Earn 1 point for each new user who joins through your link.",
+        "ru": f"🔗 Ваша реферальная ссылка:\n{referral_link}\n\n"
+              "Получайте 1 балл за каждого нового пользователя, пришедшего по вашей ссылке.",
+    }
+    await update.message.reply_text(messages.get(lang, messages["uz"]))
+
+
+async def referral_stats_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    lang = await _get_lang(user_id)
+    if not await ensure_subscribed(update, context):
+        return
+
+    own_referrals, leaderboard = await db.get_referral_stats(user_id)
+    headers = {
+        "uz": f"🏆 Sizning ballaringiz: <b>{own_referrals}</b>\n"
+              "🏅 <b>Eng ko'p taklif qilganlar (Top 10):</b>\n\n",
+        "en": f"🏆 Your points: <b>{own_referrals}</b>\n"
+              "🏅 <b>Top 10 referrers:</b>\n\n",
+        "ru": f"🏆 Ваши баллы: <b>{own_referrals}</b>\n"
+              "🏅 <b>Топ 10 пригласивших:</b>\n\n",
+    }
+    empty = {
+        "uz": "Hozircha takliflar yo'q.",
+        "en": "No referrals yet.",
+        "ru": "Пока нет приглашённых пользователей.",
+    }
+    lines = []
+    for rank, referrer in enumerate(leaderboard, start=1):
+        display_name = html.escape(
+            referrer["full_name"] or str(referrer["user_id"])
+        )
+        lines.append(f"{rank}. {display_name} — <b>{referrer['referrals']}</b>")
+
+    await update.message.reply_text(
+        headers.get(lang, headers["uz"]) + ("\n".join(lines) or empty.get(lang, empty["uz"])),
+        parse_mode="HTML",
     )
