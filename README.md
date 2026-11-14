@@ -93,7 +93,7 @@ Ma'lumotlar bazasi birinchi ishga tushishda avtomatik yaratiladi.
 
 Admin paneli admin foydalanuvchiga asosiy menyuda ko'rsatiladigan **Admin Panel** tugmasi orqali ochiladi.
 **Referral statistika** tugmasi tasdiqlangan referral'lar umumiy soni va eng ko'p odam taklif qilgan Top 10 foydalanuvchini ko'rsatadi. Yangi referral faqat majburiy kanallar obunasi tekshirilgandan keyin hisoblanadi.
-Davlatlarning admin bo'limida ko'rinadigan asl narxlari har kuni Toshkent vaqti bilan 23:50 da API'dan sinxronlanadi; narx o'zgargan davlatlar va eski/yangi narxlar adminlarga yuboriladi.
+Davlatlarning admin bo'limida ko'rinadigan asl narxlari har kuni Toshkent vaqti bilan 00:01 da API'dan sinxronlanadi; saqlangan asl narxi o'zgargan davlatlargina eski/yangi narxlari bilan adminlarga yuboriladi.
 
 ## Ma'lumotlar va zaxira
 

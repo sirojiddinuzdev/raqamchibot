@@ -564,30 +564,38 @@ async def update_country_original_prices(prices: dict[str, int]) -> list[dict]:
             """SELECT key, value FROM settings
                WHERE key LIKE 'country_%' AND key NOT LIKE '%_original'"""
         )).fetchall()
+        original_rows = await (await db.execute(
+            """SELECT key, value FROM settings
+               WHERE key LIKE 'country_%_original'"""
+        )).fetchall()
+        original_prices = {
+            key.removeprefix("country_").removesuffix("_original"): value
+            for key, value in original_rows
+        }
 
-        for key, stored_price in rows:
+        for key, _sale_price in rows:
             country_code = key.removeprefix("country_")
             if country_code not in prices:
                 continue
 
             new_price = prices[country_code]
             try:
-                old_price = int(float(stored_price))
+                old_price = int(float(original_prices.get(country_code)))
             except (TypeError, ValueError, OverflowError):
                 old_price = None
-            if old_price == new_price:
-                continue
 
-            await db.execute(
-                """INSERT INTO settings (key, value) VALUES (%s, %s)
-                   ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value""",
-                (f"country_{country_code}_original", str(new_price)),
-            )
-            changes.append({
-                "country": country_code,
-                "old_price": old_price,
-                "new_price": new_price,
-            })
+            if old_price != new_price:
+                await db.execute(
+                    """INSERT INTO settings (key, value) VALUES (%s, %s)
+                       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value""",
+                    (f"country_{country_code}_original", str(new_price)),
+                )
+                if old_price is not None:
+                    changes.append({
+                        "country": country_code,
+                        "old_price": old_price,
+                        "new_price": new_price,
+                    })
     return changes
 
 

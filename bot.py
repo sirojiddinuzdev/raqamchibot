@@ -381,9 +381,9 @@ async def post_init(application: Application):
     application.job_queue.run_daily(daily_backup_job, time=t)
     logger.info("✅ Kunlik zahira (23:59) jadvalga qo'shildi")
 
-    sync_time = time(hour=23, minute=50, tzinfo=ZoneInfo("Asia/Tashkent"))
+    sync_time = time(hour=0, minute=1, tzinfo=ZoneInfo("Asia/Tashkent"))
     application.job_queue.run_daily(daily_country_price_sync_job, time=sync_time)
-    logger.info("✅ Davlatlarning asl narxlarini API bilan sinxronlash (23:50) jadvalga qo'shildi")
+    logger.info("✅ Davlatlarning asl narxlarini API bilan sinxronlash (00:01) jadvalga qo'shildi")
 
     commands = [
         BotCommand("start", "Botni ishga tushirish"),
