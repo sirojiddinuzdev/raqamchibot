@@ -50,7 +50,7 @@ from .admin_backup import (
     adm_restore_backup_callback,
     adm_receive_db_document_handler
 )
-from .admin_text_handler import admin_text_handler
+from .admin_text_handler import admin_text_handler, cancel_admin_flow
 
 __all__ = [
     "is_admin",
@@ -88,4 +88,5 @@ __all__ = [
     "adm_remove_admin_callback",
     "adm_del_admin_callback",
     "admin_text_handler",
+    "cancel_admin_flow",
 ]

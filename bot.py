@@ -156,7 +156,16 @@ async def universal_text_handler(update: Update, context: ContextTypes.DEFAULT_T
 
     # Cancel tugmasi — barcha tillarda
     CANCEL_TEXTS = {"❌ Bekor qilish", "❌ Cancel", "❌ Отмена"}
-    BACK_TEXTS = {"🔙 Bosh menyuga", "🔙 Back to menu", "🔙 В главное меню"}
+
+    # Bekor qilishni faol oqimlar matnni o'z inputi deb qabul qilishidan oldin
+    # boshqaramiz. Admin oqimida esa maxsus tozalash va navigatsiya saqlanadi.
+    if text in CANCEL_TEXTS:
+        if await is_admin(user_id):
+            from handlers.admin import cancel_admin_flow
+            await cancel_admin_flow(update, context)
+        else:
+            await back_to_main_handler(update, context)
+        return
 
     # Admin action lari uchun
     if await is_admin(user_id):
@@ -172,10 +181,6 @@ async def universal_text_handler(update: Update, context: ContextTypes.DEFAULT_T
 
     # Foydalanuvchi summa kiritayotganda
     if context.user_data.get("awaiting_deposit_amount"):
-        if text in CANCEL_TEXTS:
-            context.user_data.clear()
-            await back_to_main_handler(update, context)
-            return
         try:
             amount_text = text.replace(" ", "").replace(",", "").replace(".", "")
             amount = int(amount_text)
@@ -199,10 +204,6 @@ async def universal_text_handler(update: Update, context: ContextTypes.DEFAULT_T
 
     # Foydalanuvchi chek yuborish holatida
     if context.user_data.get("awaiting_deposit_check"):
-        if text in CANCEL_TEXTS:
-            context.user_data.clear()
-            await back_to_main_handler(update, context)
-            return
         from handlers.user.user_core import _get_lang
         lang = await _get_lang(user_id)
         photo_prompts = {"uz": "📸 Iltimos, chek <b>rasmini</b> yoki faylini yuboring.", "en": "📸 Please send a <b>photo</b> or file of your receipt.", "ru": "📸 Пожалуйста, отправьте <b>фото</b> или файл чека."}
@@ -212,10 +213,6 @@ async def universal_text_handler(update: Update, context: ContextTypes.DEFAULT_T
     # Foydalanuvchi promo kod kiritishi
     user_action = context.user_data.get("user_action")
     if user_action == "use_promo":
-        if text in CANCEL_TEXTS:
-            context.user_data.clear()
-            await back_to_main_handler(update, context)
-            return
         from handlers.user.user_promocode import user_promo_text_handler
         await user_promo_text_handler(update, context)
         return

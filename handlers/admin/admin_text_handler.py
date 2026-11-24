@@ -22,8 +22,43 @@ def _reset_admin_flow(context: ContextTypes.DEFAULT_TYPE):
         "api_countries",
         "target_user",
         "target_dep_id",
+        "temp_channel_id",
+        "temp_channel_name",
+        "temp_card_number",
+        "awaiting_search",
+        "user_search_active",
+        "awaiting_deposit_amount",
+        "awaiting_deposit_check",
+        "deposit_session_id",
+        "deposit_amount",
+        "user_action",
+        "pending_country",
+        "pending_price",
+        "pending_country_name",
     ]:
         context.user_data.pop(key, None)
+
+
+async def cancel_admin_flow(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+):
+    """Faol admin kiritish oqimini istalgan bosqichda xavfsiz bekor qilish."""
+    user_id = update.effective_user.id
+    action = context.user_data.get("adm_action")
+    search_origin = bool(context.user_data.get("country_search_origin"))
+
+    _reset_admin_flow(context)
+    await update.message.reply_text(
+        s.BUY_CANCELLED.get(
+            await db.get_user_lang(user_id),
+            s.BUY_CANCELLED["uz"],
+        ),
+        reply_markup=admin_main_keyboard(),
+    )
+
+    if action == "set_country_price" and not search_origin:
+        from handlers.admin.admin_catalog import adm_countries_handler
+        await adm_countries_handler(update, context, preserve_page=True)
 
 
 async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -32,44 +67,13 @@ async def admin_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not await is_admin(user_id):
         return
 
-    action = context.user_data.get("adm_action")
-    if not action:
+    text = update.message.text
+    if text in s.MENU_CANCEL.values():
+        await cancel_admin_flow(update, context)
         return
 
-    text = update.message.text
-
-    if text in s.MENU_CANCEL.values():
-        if action == "set_country_price":
-            search_origin = context.user_data.pop("country_search_origin", False)
-            if search_origin:
-                context.user_data.pop("admin_search_active", None)
-            _reset_admin_flow(context)
-            if search_origin:
-                context.user_data.pop("api_countries", None)
-            await update.message.reply_text(
-                s.BUY_CANCELLED.get(
-                    await db.get_user_lang(user_id),
-                    s.BUY_CANCELLED["uz"],
-                ),
-                reply_markup=admin_main_keyboard(),
-            )
-            if not search_origin:
-                from handlers.admin.admin_catalog import adm_countries_handler
-                await adm_countries_handler(update, context, preserve_page=True)
-            return
-
-        if action == "search_country":
-            context.user_data.pop("adm_action", None)
-            context.user_data.pop("admin_search_active", None)
-        else:
-            _reset_admin_flow(context)
-        await update.message.reply_text(
-            s.BUY_CANCELLED.get(
-                await db.get_user_lang(user_id),
-                s.BUY_CANCELLED["uz"],
-            ),
-            reply_markup=admin_main_keyboard(),
-        )
+    action = context.user_data.get("adm_action")
+    if not action:
         return
 
     if action == "broadcast":

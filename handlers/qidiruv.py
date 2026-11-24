@@ -110,6 +110,7 @@ async def user_search_text_handler(update: Update, context: ContextTypes.DEFAULT
         ),
     ]])
     context.user_data.pop("awaiting_search", None)
+    context.user_data.pop("user_search_active", None)
     await update.message.reply_text(text, parse_mode="HTML", reply_markup=keyboard)
 
 
