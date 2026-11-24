@@ -138,9 +138,15 @@ ADMIN_SEARCH_RESULT = {
           "💰 <b>Цена продажи:</b> {sale_price} сум",
 }
 ADMIN_SEARCH_NOT_ON_SALE = {
-    "uz": "❌ {country} hozir sotuvda yo'q.",
-    "en": "❌ {country} is not currently for sale.",
-    "ru": "❌ {country} сейчас не продаётся.",
+    "uz": "❌ {country} hozir sotuvda yo'q.\n"
+          "💵 <b>Asl narxi:</b> {original_price} so'm\n"
+          "💰 <b>Sotuv narxi:</b> Sotuvda emas",
+    "en": "❌ {country} is not currently for sale.\n"
+          "💵 <b>Original price:</b> {original_price} UZS\n"
+          "💰 <b>Sale price:</b> Not for sale",
+    "ru": "❌ {country} сейчас не продаётся.\n"
+          "💵 <b>Исходная цена:</b> {original_price} сум\n"
+          "💰 <b>Цена продажи:</b> Не продаётся",
 }
 ADMIN_SEARCH_EDIT_BTN = {
     "uz": "✏️ Tahrirlash",

@@ -159,44 +159,50 @@ async def admin_search_text_handler(update: Update, context: ContextTypes.DEFAUL
 
     code, country_name = result
     price = await db.get_setting(f"country_{code}")
-    if price is not None:
-        original_price = await db.get_setting(f"country_{code}_original")
-        if original_price is None:
-            api_countries = await spider.get_countries()
-            api_price = api_countries.get(code) if api_countries else None
-            if api_price is not None:
-                original_price = str(int(float(api_price) * EXCHANGE_RATE))
+    original_price = await db.get_setting(f"country_{code}_original")
+    try:
+        original_price = (
+            f"{int(float(original_price)):,}"
+            if original_price is not None
+            else None
+        )
+    except (TypeError, ValueError, OverflowError):
+        original_price = None
 
+    if original_price is None:
+        api_countries = await spider.get_countries()
+        api_price = api_countries.get(code) if api_countries else None
+        try:
+            original_price = (
+                f"{int(float(api_price) * EXCHANGE_RATE):,}"
+                if api_price is not None
+                else "Noma'lum"
+            )
+        except (TypeError, ValueError, OverflowError):
+            original_price = "Noma'lum"
+
+    if price is not None:
         text = s.ADMIN_SEARCH_RESULT.get(lang, s.ADMIN_SEARCH_RESULT["uz"]).format(
             country=country_name,
             code=code,
-            original_price=(
-                f"{int(float(original_price)):,}"
-                if original_price is not None
-                else "Noma'lum"
-            ),
+            original_price=original_price,
             sale_price=f"{int(float(price)):,}",
         )
-        keyboard = InlineKeyboardMarkup([[
-            InlineKeyboardButton(
-                s.ADMIN_SEARCH_EDIT_BTN.get(lang, s.ADMIN_SEARCH_EDIT_BTN["uz"]),
-                callback_data=f"admin_search_edit_{code}",
-            ),
-            InlineKeyboardButton(
-                s.ADMIN_SEARCH_DELETE_BTN.get(lang, s.ADMIN_SEARCH_DELETE_BTN["uz"]),
-                callback_data=f"admin_search_delete_{code}",
-            ),
-        ]])
     else:
         text = s.ADMIN_SEARCH_NOT_ON_SALE.get(
             lang, s.ADMIN_SEARCH_NOT_ON_SALE["uz"]
-        ).format(country=country_name)
-        keyboard = InlineKeyboardMarkup([[
-            InlineKeyboardButton(
-                s.ADMIN_SEARCH_ADD_BTN.get(lang, s.ADMIN_SEARCH_ADD_BTN["uz"]),
-                callback_data=f"admin_search_add_{code}",
-            ),
-        ]])
+        ).format(country=country_name, original_price=original_price)
+
+    keyboard = InlineKeyboardMarkup([[
+        InlineKeyboardButton(
+            s.ADMIN_SEARCH_EDIT_BTN.get(lang, s.ADMIN_SEARCH_EDIT_BTN["uz"]),
+            callback_data=f"admin_search_edit_{code}",
+        ),
+        InlineKeyboardButton(
+            s.ADMIN_SEARCH_DELETE_BTN.get(lang, s.ADMIN_SEARCH_DELETE_BTN["uz"]),
+            callback_data=f"admin_search_delete_{code}",
+        ),
+    ]])
 
     await update.message.reply_text(text, parse_mode="HTML", reply_markup=keyboard)
 
@@ -210,39 +216,44 @@ async def admin_search_edit_callback(update: Update, context: ContextTypes.DEFAU
 
     code = query.data.removeprefix("admin_search_edit_")
     price = await db.get_setting(f"country_{code}")
-    if price is None:
-        await query.answer("Bu davlat endi sotuvda emas.", show_alert=True)
-        return
-    await query.answer()
-
     lang = await _get_lang(user_id)
     country_name = get_country_name(code)
     api_countries = await spider.get_countries()
-    if not api_countries:
-        await query.message.reply_text(
-            "❌ API dan davlatlar narxini olib bo'lmadi. Keyinroq urinib ko'ring."
-        )
+    if not api_countries or code not in api_countries:
+        await query.answer("API dan davlat narxini olib bo'lmadi.", show_alert=True)
         return
+
+    await query.answer()
+    selection_mode = "edit" if price is not None else "add"
+    api_price = api_countries[code]
+    try:
+        api_price_uzs = f"{int(float(api_price) * EXCHANGE_RATE):,} so'm"
+    except (TypeError, ValueError, OverflowError):
+        api_price_uzs = "Noma'lum"
+    if api_price_uzs == "Noma'lum":
+        await query.message.reply_text(
+            "❌ API dan davlatlarning asl narxini olib bo'lmadi. "
+            "Sotuv narxini baribir kiritishingiz mumkin."
+        )
 
     context.user_data.update({
         "adm_action": "set_country_price",
         "target_country": code,
         "target_country_name": country_name,
-        "country_selection_mode": "edit",
+        "country_selection_mode": selection_mode,
         "country_search_origin": True,
         "admin_search_active": True,
         "api_countries": api_countries,
     })
-    api_price = api_countries.get(code)
-    api_price_uzs = (
-        f"{int(float(api_price) * EXCHANGE_RATE):,} so'm"
-        if api_price
-        else "Noma'lum"
+    current_price_text = (
+        f"Amaldagi sotuv narxi: {int(float(price)):,} so'm\n"
+        if price is not None
+        else ""
     )
     await query.message.delete()
     await query.message.chat.send_message(
         f"🌍 {country_name} ({code})\n"
-        f"Amaldagi sotuv narxi: {int(float(price)):,} so'm\n"
+        f"{current_price_text}"
         f"Asl narxi (API dagi): {api_price_uzs}\n\n"
         "Yangi sotish narxini so'mda kiriting:",
         reply_markup=cancel_keyboard(lang),
@@ -262,6 +273,7 @@ async def admin_search_delete_callback(
     code = query.data.removeprefix("admin_search_delete_")
     country_name = get_country_name(code)
     await db.del_setting(f"country_{code}")
+    await db.del_setting(f"country_{code}_original")
     first_page_order = await db.get_setting("purchase_first_page_order")
     selected = [
         item for item in (first_page_order or "").split(",")
